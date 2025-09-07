@@ -24,7 +24,9 @@ export default function RelatorioPlantao() {
     '39 CONES',
     'CELULAR',
     'CARREGADOR DO CELULAR',
-    'OUTROS / TIRAR FOTO',
+    'CAMÊRA CORPORAL',
+    'CARREGADOR DE CAMÊRA CORPORAL',
+    'OUTROS / TIRAR FOTO OU VÍDEO',
     'NENHUMA DAS OPÇÕES',
   ];
 
