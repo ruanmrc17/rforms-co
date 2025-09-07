@@ -17,73 +17,96 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para gerar PDF
-const PdfPrinter = require('pdfmake');
-const fs = require('fs');
-const path = require('path');
 
-const fonts = {
-  Roboto: {
-    normal: path.join(__dirname, 'fonts/Roboto-Regular.ttf'),
-    bold: path.join(__dirname, 'fonts/Roboto-Bold.ttf'),
-    italics: path.join(__dirname, 'fonts/Roboto-Italic.ttf'),
-    bolditalics: path.join(__dirname, 'fonts/Roboto-BoldItalic.ttf')
-  }
-};
-
-const printer = new PdfPrinter(fonts);
-
-async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
-  const docDefinition = {
-    pageSize: 'A4',
-    pageMargins: [50, 70, 50, 50],
-    header: {
-      margin: [50, 20, 50, 0],
-      columns: [
-        { text: 'RELATÓRIO DIÁRIO DE PLANTÃO', alignment: 'center', fontSize: 16, bold: true },
-      ]
-    },
-    footer: (currentPage, pageCount) => {
-      return {
-        text: `Página ${currentPage} de ${pageCount}`,
-        alignment: 'center',
-        fontSize: 10,
-        margin: [0, 0, 0, 10]
-      };
-    },
-    content: [
-      { text: 'INSPETORES GCM ATALAIA - AL', alignment: 'center', fontSize: 10 },
-      { text: 'SECRETARIA DE DEFESA SOCIAL', alignment: 'center', fontSize: 10 },
-      { text: 'GUARDA CIVIL MUNICIPAL DE ATALAIA - AL', alignment: 'center', fontSize: 10 },
-      { text: '\n' },
-      { text: `NOME: ${nome?.toUpperCase() || '-'}` },
-      { text: `MATRÍCULA: ${matricula?.toUpperCase() || '-'}` },
-      { text: `DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}` },
-      { text: `DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}` },
-      { text: '\nOBJETOS ENCONTRADOS NA BASE:', bold: true },
-      ...Object.keys(objetos).map(item => {
-        if (item === 'cones' && objetos.cones?.marcado) return `- ${objetos.cones.quantidade || 0} CONE(S)`;
-        if (item === 'NENHUMA DAS OPÇÕES' && objetos[item]?.marcado && objetos[item].outros) return `- ${objetos[item].outros.toUpperCase()}`;
-        if (objetos[item]) return `- ${item.toUpperCase()}`;
-      }).filter(Boolean),
-      { text: '\nPATRULHAMENTO PREVENTIVO:', bold: true },
-      ...Object.keys(patrulhamento).map(item => `- ${item.toUpperCase()}: ${patrulhamento[item]?.primeiro || ''}`),
-      { text: '\nOCORRÊNCIAS:', bold: true },
-      ...Object.keys(ocorrencias).map(item => `- ${item.toUpperCase()}: ${ocorrencias[item]?.detalhes || ''}`),
-      { text: '\nOBSERVAÇÕES:', bold: true },
-      { text: observacoes || '-' }
-    ]
-  };
-
-  const pdfDoc = printer.createPdfKitDocument(docDefinition);
-  const chunks = [];
-  return new Promise((resolve, reject) => {
+function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
+  return new Promise((resolve) => {
+    const pdfDoc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
+    const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
-    pdfDoc.on('error', reject);
+
+    // Função para adicionar texto grande com quebra automática
+    function addTextBlock(text, options = {}) {
+      const { width = 450, lineGap = 2 } = options;
+      if (!text) return;
+
+      const paragraphs = text.split('\n');
+      paragraphs.forEach(par => {
+        const lines = pdfDoc.splitTextToSize(par, width);
+        lines.forEach(line => {
+          if (pdfDoc.y > pdfDoc.page.height - 50) pdfDoc.addPage();
+          pdfDoc.text(line, { width, lineGap });
+        });
+      });
+    }
+
+    // Logo
+    const logoPath = path.join(__dirname, 'seglogoata.jpg');
+    pdfDoc.image(logoPath, 450, 15, { width: 100 });
+
+    // Títulos
+    pdfDoc.fontSize(18).text('RELATÓRIO DIÁRIO DE PLANTÃO', { align: 'center' });
+    pdfDoc.fontSize(10).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
+    pdfDoc.fontSize(10).text('SECRETARIA DE DEFESA SOCIAL', { align: 'center' });
+    pdfDoc.fontSize(10).text('GUARDA CIVIL MUNICIPAL DE ATALAIA - AL', { align: 'center' });
+    pdfDoc.moveDown();
+
+    // Informações principais
+    pdfDoc.fontSize(12).text(`NOME: ${nome?.toUpperCase() || '-'}`);
+    pdfDoc.text(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
+    pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
+    pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
+    pdfDoc.moveDown();
+
+    // Objetos
+    pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
+    if (objetos.cones?.marcado) {
+      const qtd = parseInt(objetos.cones.quantidade) || 0;
+      pdfDoc.text(`- ${qtd} CONE(S)`);
+    }
+
+    Object.keys(objetos).forEach(item => {
+      if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
+        pdfDoc.text(`- ${item.toUpperCase()}`);
+      }
+    });
+
+    if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
+      addTextBlock(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
+    }
+
+    // Patrulhamento
+    pdfDoc.moveDown();
+    pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
+    Object.keys(patrulhamento).forEach(item => {
+      const detalhes = patrulhamento[item]?.primeiro || '';
+      addTextBlock(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+    });
+
+    // Ocorrências
+    pdfDoc.moveDown();
+    pdfDoc.text('OCORRÊNCIAS:');
+    Object.keys(ocorrencias).forEach(item => {
+      const detalhes = ocorrencias[item]?.detalhes || '';
+      addTextBlock(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+    });
+
+    // Observações
+    pdfDoc.moveDown();
+    pdfDoc.text('OBSERVAÇÕES:');
+    addTextBlock(observacoes?.toUpperCase() || '-');
+
+    // Numeração de páginas
+    const range = pdfDoc.bufferedPageRange();
+    for (let i = 0; i < range.count; i++) {
+      pdfDoc.switchToPage(i);
+      pdfDoc.fontSize(10)
+            .text(`Página ${i + 1} de ${range.count}`, 0, pdfDoc.page.height - 30, { align: 'center' });
+    }
+
     pdfDoc.end();
   });
 }
-
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
   return new Promise((resolve, reject) => {
