@@ -17,6 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para gerar PDF
+
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -24,15 +25,15 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // Função para adicionar número de página em preto
+    // Função para adicionar número de página
     function addPageNumber(doc) {
-      const bottom = doc.page.height - 30;
+      const bottom = doc.page.height - 30; // distância do fundo
       const pageNumber = doc.page.number;
-      doc.fontSize(8).fillColor('black');
-      doc.text(`Página ${pageNumber}`, 0, bottom, { align: 'right' });
+      doc.fontSize(8).fillColor('black'); // cor preta
+      doc.text(`Página ${pageNumber}`, 0, bottom, { align: 'right' }); // canto inferior direito
     }
 
-    // Sempre que uma nova página for criada
+    // Numeração da primeira página
     pdfDoc.on('pageAdded', () => addPageNumber(pdfDoc));
 
     // Conteúdo do PDF
