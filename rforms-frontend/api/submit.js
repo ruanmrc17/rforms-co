@@ -24,7 +24,6 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // Função para adicionar texto grande com quebra automática
     function addTextBlock(text, options = {}) {
       const { width = 450, lineGap = 2 } = options;
       if (!text) return;
@@ -92,19 +91,18 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('OBSERVAÇÕES:');
     addTextBlock(observacoes?.toUpperCase() || '-');
 
-    // Numeração das páginas na parte inferior direita
-    const range = pdfDoc.bufferedPageRange(); // { start: 0, count: X }
+    // NUMERAÇÃO: percorrer todas as páginas antes de finalizar
+    const range = pdfDoc.bufferedPageRange();
     for (let i = 0; i < range.count; i++) {
       pdfDoc.switchToPage(i);
       pdfDoc.fontSize(10)
-            .text(`${i + 1}`, pdfDoc.page.width - 50, pdfDoc.page.height - 30, {
-              align: 'right'
-            });
+            .text(`${i + 1}`, pdfDoc.page.width - 50, pdfDoc.page.height - 30, { align: 'right' });
     }
 
-    pdfDoc.end();
+    pdfDoc.end(); // finalize o PDF
   });
 }
+
 
 
 // Função para gerar ZIP
