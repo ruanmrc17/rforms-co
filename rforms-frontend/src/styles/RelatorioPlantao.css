@@ -141,6 +141,7 @@ h1, h2 {
   border: 1px solid #ccc;
   min-height: 80px;
   transition: border-color 0.3s ease;
+  width: 500px;
 }
 
 .observacoes-group textarea:focus {
@@ -320,4 +321,12 @@ input[type="file"] {
     max-width: 160px;
     font-size: 0.9rem;
   }
+}
+.site-logo {
+  display: block;
+  margin: 0 auto 20px auto; /* centraliza e dá espaço abaixo */
+  max-width: 150px;         /* controla o tamanho */
+  height: auto;             /* mantém proporção */
+  border-radius: 10%;       /* deixa arredondado (se quiser em formato circular) */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2); /* sombra suave */
 }

@@ -9,19 +9,16 @@ export default function RelatorioPlantao() {
     horaInicio: '',
     dataSaida: '',
     horaSaida: '',
-    objetos: {},
-    patrulhamento: {}, 
+    objetos: {
+      cones: { marcado: false, quantidade: 1 } // objeto para cones
+    },
+    patrulhamento: {},
     observacoes: '',
     fotos: null,
     videos: null,
   });
 
   const objetosList = [
-    '15 CONES',
-    '20 CONES',
-    '25 CONES',
-    '30 CONES',
-    '39 CONES',
     'CELULAR',
     'CARREGADOR DO CELULAR',
     'CAMÊRA CORPORAL',
@@ -41,36 +38,49 @@ export default function RelatorioPlantao() {
     'POVOADO BOA FÉ',
     'DISTRITO BRANCA DE ATALAIA',
     'PATRULHAMENTO PREVENTIVO: POVOADO OURICURI',
-    'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA'
+    'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA',
   ];
 
   const patrulhamentoTextos = {
     'DISTRITO BOCA DA MATA': 'DISTRITO BOCA DA MATA',
-    'POVOADO OLHOS D’ÁGUA': "POVOADO OLHOS D'ÁGUA",
-    'DISTRITO SANTO ANTÔNIO': "PATRULHAMENTO PREVENTIVO: DISTRITO SANTO ANTÔNIO",
+    "POVOADO OLHOS D’ÁGUA": "POVOADO OLHOS D'ÁGUA",
+    'DISTRITO SANTO ANTÔNIO': 'PATRULHAMENTO PREVENTIVO: DISTRITO SANTO ANTÔNIO',
     'VILA JOSÉ PAULINO': 'PATRULHAMENTO PREVENTIVO: VILA JOSÉ PAULINO',
     'CENTRO': 'PATRULHAMENTO PREVENTIVO: CENTRO',
     'USINA BRASILEIRA': 'PATRULHAMENTO PREVENTIVO: USINA BRASILEIRA',
     'POVOADO SAPUCAIA': 'PATRULHAMENTO PREVENTIVO: POVOADO SAPUCAIA',
     'POVOADO BOA FÉ': 'PATRULHAMENTO PREVENTIVO: POVOADO BOA FÉ',
     'DISTRITO BRANCA DE ATALAIA': 'PATRULHAMENTO PREVENTIVO: DISTRITO BRANCA DE ATALAIA',
-    'PATRULHAMENTO PREVENTIVO: POVOADO OURICURI':'PATRULHAMENTO PREVENTIVO: POVOADO OURICURI',
-    'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA':'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA'
+    'PATRULHAMENTO PREVENTIVO: POVOADO OURICURI': 'PATRULHAMENTO PREVENTIVO: POVOADO OURICURI',
+    'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA': 'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA',
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
 
-    if (type === 'checkbox') {
+    if (type === 'checkbox' && name === 'CONE(S)') {
+      setData(prev => ({
+        ...prev,
+        objetos: {
+          ...prev.objetos,
+          cones: { ...prev.objetos.cones, marcado: checked }
+        }
+      }));
+    } else if (type === 'number' && name === 'quantidadeCones') {
+      setData(prev => ({
+        ...prev,
+        objetos: {
+          ...prev.objetos,
+          cones: { ...prev.objetos.cones, quantidade: value }
+        }
+      }));
+    } else if (type === 'checkbox') {
       setData(prev => ({
         ...prev,
         objetos: { ...prev.objetos, [name]: checked },
       }));
     } else if (type === 'file') {
-      setData(prev => ({
-        ...prev,
-        [name]: files,
-      }));
+      setData(prev => ({ ...prev, [name]: files }));
     } else if (type === 'text' && name.startsWith('patrulhamento')) {
       const [, distrito, field] = name.split('-');
       setData(prev => ({
@@ -106,8 +116,12 @@ export default function RelatorioPlantao() {
       }
     });
 
+    console.log("=== Dados do state (antes de enviar) ===", data);
+    console.log("=== Dados do FormData (após montar) ===");
+    for (let pair of formDataToSend.entries()) console.log(pair[0], pair[1]);
+
     try {
-      const res = await fetch('https://rforms-co.vercel.app/api/submit', { 
+      const res = await fetch('https://rforms-co.vercel.app/api/submit', {
         method: 'POST',
         body: formDataToSend,
       });
@@ -120,14 +134,9 @@ export default function RelatorioPlantao() {
 
       const result = await res.json();
       alert(result.message || 'Relatório enviado com sucesso!');
-
     } catch (err) {
       console.error(err);
-      if (err.message.includes('Failed to fetch')) {
-        alert('Não foi possível conectar ao servidor. Verifique se ele está rodando.');
-      } else {
-        alert(`Erro desconhecido: ${err.message}`);
-      }
+      alert(`Erro desconhecido: ${err.message}`);
     }
   };
 
@@ -135,8 +144,9 @@ export default function RelatorioPlantao() {
     <div className="form-container">
       <h1>INSPETORES GCM ATALAIA - AL</h1>
       <h2>RELATÓRIO DE PLANTÃO</h2>
-      <form onSubmit={handleSubmit} className="form-base">
+      <img src="/seglogoata.jpg" alt="Logo" className="site-logo" />
 
+      <form onSubmit={handleSubmit} className="form-base">
         <div className="field-group">
           <label>Nome:</label>
           <input type="text" name="nome" value={data.nome} onChange={handleChange} required />
@@ -163,6 +173,22 @@ export default function RelatorioPlantao() {
 
         <fieldset className="checkbox-group">
           <legend>OBJETOS ENCONTRADOS NA BASE:</legend>
+          <label>
+            <input type="checkbox" name="CONE(S)" checked={data.objetos.cones.marcado} onChange={handleChange} />
+            CONE(S)
+            {data.objetos.cones.marcado && (
+              <input
+                type="number"
+                name="quantidadeCones"
+                value={data.objetos.cones.quantidade}
+                onChange={handleChange}
+                placeholder="Quantidade"
+                min="1"
+                style={{ marginLeft: '10px', width: '80px' }}
+              />
+            )}
+          </label>
+
           {objetosList.map(item => (
             <label key={item}>
               <input type="checkbox" name={item} checked={!!data.objetos[item]} onChange={handleChange} />
@@ -202,28 +228,14 @@ export default function RelatorioPlantao() {
         <fieldset>
           <legend style={{ marginTop: '20px' }}>IMPORTAR FOTOS</legend>
           <label htmlFor="fotos" className="upload-label">📷 Selecionar Fotos</label>
-          <input
-            id="fotos"
-            type="file"
-            name="fotos"
-            accept="image/*"
-            multiple
-            onChange={handleChange}
-          />
+          <input id="fotos" type="file" name="fotos" accept="image/*" multiple onChange={handleChange} />
           {data.fotos && data.fotos.length > 0 && (
             <p className="upload-info">{data.fotos.length} foto(s) selecionada(s)</p>
           )}
 
           <legend>IMPORTAR VÍDEOS</legend>
           <label htmlFor="videos" className="upload-label">🎥 Selecionar Vídeos</label>
-          <input
-            id="videos"
-            type="file"
-            name="videos"
-            accept="video/*"
-            multiple
-            onChange={handleChange}
-          />
+          <input id="videos" type="file" name="videos" accept="video/*" multiple onChange={handleChange} />
           {data.videos && data.videos.length > 0 && (
             <p className="upload-info">{data.videos.length} vídeo(s) selecionado(s)</p>
           )}
