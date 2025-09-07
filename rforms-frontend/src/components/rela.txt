@@ -1,2 +1,5 @@
 tirar os inputs de cone e colocar um só pra caso ouver, alterar pdf,
 
+numeracao nas paginas do pdf
+
+deixar observacao maior

@@ -139,10 +139,12 @@ h1, h2 {
   padding: 0.75rem;
   border-radius: 6px;
   border: 1px solid #ccc;
-  min-height: 80px;
+  min-height: 120px; /* maior altura */
+  width: 97%; /* largura total do container */
+  max-width: 100%; /* garante que não ultrapasse o container */
   transition: border-color 0.3s ease;
-  width: 500px;
 }
+
 
 .observacoes-group textarea:focus {
   border-color: #2980b9;

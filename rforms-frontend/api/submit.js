@@ -17,30 +17,32 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para gerar PDF
-function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes }) {
+function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // Logo no canto superior direito
+    // Logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     pdfDoc.image(logoPath, 450, 15, { width: 100 });
 
-    // Título e subtítulo centralizados
-    pdfDoc.fontSize(18).text('RELATÓRIO DE PLANTÃO', { align: 'center' });
+    // Títulos
+    pdfDoc.fontSize(18).text('RELATÓRIO DIÁRIO DE PLANTÃO', { align: 'center' });
     pdfDoc.fontSize(10).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
+    pdfDoc.fontSize(10).text('SECRETARIA DE DEFESA SOCIAL', { align: 'center' });
+    pdfDoc.fontSize(10).text('GUARDA CIVIL MUNICIPAL DE ATALAIA - AL', { align: 'center' });
     pdfDoc.moveDown();
 
     // Informações principais
     pdfDoc.fontSize(12).text(`NOME: ${nome?.toUpperCase() || '-'}`);
     pdfDoc.text(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
-    pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA: ${horaInicio || '-'}`);
-    pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA: ${horaSaida || '-'}`);
+    pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
+    pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
     pdfDoc.moveDown();
 
-    // OBJETOS
+    // Objetos
     pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
     if (objetos.cones?.marcado) {
       const qtd = parseInt(objetos.cones.quantidade) || 0;
@@ -57,15 +59,26 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
       pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
     }
 
-    // PATRULHAMENTO
+    // Patrulhamento
     pdfDoc.moveDown();
     pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
-    Object.keys(patrulhamento).forEach(distrito => {
-      const nomes = patrulhamento[distrito];
-      pdfDoc.text(`- ${distrito.toUpperCase()}: ${nomes?.primeiro?.toUpperCase() || ''}`);
+    Object.keys(patrulhamento).forEach(item => {
+      const detalhes = patrulhamento[item]?.primeiro || '';
+      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
     });
 
-    // OBSERVAÇÕES
+    // Ocorrências
+    pdfDoc.moveDown();
+    // console.log(ocorrencias)
+pdfDoc.text('OCORRÊNCIAS:');
+    Object.keys(ocorrencias).forEach(item => {
+  const detalhes = ocorrencias[item]?.detalhes || '';
+  pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+});
+
+
+
+    // Observações
     pdfDoc.moveDown();
     pdfDoc.text('OBSERVAÇÕES:');
     pdfDoc.text(observacoes?.toUpperCase() || '-');
@@ -92,8 +105,6 @@ function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
     archive.finalize();
   });
 }
-
-// Rota POST /api/submit
 app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
     const {
@@ -106,23 +117,28 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
       observacoes = ''
     } = req.body;
 
-    let objetos = {};
-    let patrulhamento = {};
+    // Objetos
+    let objetos = req.body.objetos ? (typeof req.body.objetos === 'string' ? JSON.parse(req.body.objetos) : req.body.objetos) : {};
 
-    if (req.body.objetos) {
-      objetos = typeof req.body.objetos === 'string' ? JSON.parse(req.body.objetos) : req.body.objetos;
-    }
+    // Patrulhamento
+    let patrulhamento = req.body.patrulhamento ? (typeof req.body.patrulhamento === 'string' ? JSON.parse(req.body.patrulhamento) : req.body.patrulhamento) : {};
 
-    if (req.body.patrulhamento) {
-      patrulhamento = typeof req.body.patrulhamento === 'string' ? JSON.parse(req.body.patrulhamento) : req.body.patrulhamento;
-    }
+    // Ocorrências
+    let ocorrencias = req.body.ocorrencias ? (typeof req.body.ocorrencias === 'string' ? JSON.parse(req.body.ocorrencias) : req.body.ocorrencias) : {};
 
     if (objetos.cones?.quantidade) objetos.cones.quantidade = parseInt(objetos.cones.quantidade) || 0;
 
+    // Debug no console
     console.log('OBJETOS RECEBIDOS:', objetos);
     console.log('PATRULHAMENTO RECEBIDO:', patrulhamento);
+    console.log('OCORRÊNCIAS RECEBIDAS:', ocorrencias);
 
-    const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes });
+    // Extrair nomes das ocorrências selecionadas
+    const nomesOcorrencias = Object.keys(ocorrencias).filter(item => ocorrencias[item]?.primeiro || ocorrencias[item]);
+    console.log('Nomes das ocorrências selecionadas:', nomesOcorrencias);
+console.log("OCORRÊNCIAS NO BACKEND:", ocorrencias);
+
+    const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes });
 
     const hoje = new Date();
     const dataAtual = `${hoje.getDate().toString().padStart(2,'0')}-${(hoje.getMonth()+1).toString().padStart(2,'0')}-${hoje.getFullYear()}`;

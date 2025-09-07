@@ -3,21 +3,23 @@ import '../styles/RelatorioPlantao.css';
 
 export default function RelatorioPlantao() {
   const [data, setData] = useState({
-    nome: '',
-    matricula: '',
-    dataInicio: '',
-    horaInicio: '',
-    dataSaida: '',
-    horaSaida: '',
-    objetos: {
-      cones: { marcado: false, quantidade: 1 },
-      'NENHUMA DAS OPÇÕES': { marcado: false, outros: '' },
-    },
-    patrulhamento: {},
-    observacoes: '',
-    fotos: null,
-    videos: null,
-  });
+  nome: '',
+  matricula: '',
+  dataInicio: '',
+  horaInicio: '',
+  dataSaida: '',
+  horaSaida: '',
+  objetos: {
+    cones: { marcado: false, quantidade: 1 },
+    'NENHUMA DAS OPÇÕES': { marcado: false, outros: '' },
+  },
+  patrulhamento: {},
+  ocorrencias: {}, // <-- inicializa aqui
+  observacoes: '',
+  fotos: null,
+  videos: null,
+});
+
 
   const objetosList = [
     'CELULAR',
@@ -55,107 +57,131 @@ export default function RelatorioPlantao() {
     'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA': 'PATRULHAMENTO PREVENTIVO: POVOADO PORONGABA',
   };
 
-  const handleChange = (e) => {
-    const { name, value, type, checked, files } = e.target;
+  const ocorrenciasList = [
+    'VIOLÊNCIA DOMÉSTICA',
+    'AUX. PACIENTE PSIQUIÁTRICO',
+    'ACIDENTE DE TRÂNSITO COM VITIMAS',
+    'ACIDENTE DE TRÂNSITO SEM VITIMAS',
+    'HOMICÍDIO',
+    'TENTATIVA DE HOMICÍDIO',
+    'LESÃO CORPORAL',
+    'ESTUPRO / VULNERÁVEL',
+    'ROUBO / FURTO',
+    'CRIME CONTRA CRIANÇA / ADOLESCENTE',
+    'PESSOAS DESAPARECIDAS',
+    'SUICÍDIO',
+    'MAUS TRATOS CONTRA ANIMAIS',
+    'ROUBO A RESIDENCIA',
+    'CRIME CONTRA O IDOSO',
+    'DESACATO',
+    'OUTROS'
+  ]
 
-    if (type === 'checkbox' && name === 'CONE(S)') {
-      setData(prev => ({
-        ...prev,
-        objetos: {
-          ...prev.objetos,
-          cones: { ...prev.objetos.cones, marcado: checked }
-        }
-      }));
-    } else if (type === 'number' && name === 'quantidadeCones') {
-      setData(prev => ({
-        ...prev,
-        objetos: {
-          ...prev.objetos,
-          cones: { ...prev.objetos.cones, quantidade: value }
-        }
-      }));
-    } else if (type === 'checkbox' && name === 'NENHUMA DAS OPÇÕES') {
-      setData(prev => ({
-        ...prev,
-        objetos: {
-          ...prev.objetos,
-          [name]: { ...prev.objetos[name], marcado: checked }
-        }
-      }));
-    } else if (type === 'text' && name === 'NENHUMA_OUTROS') {
-      setData(prev => ({
-        ...prev,
-        objetos: {
-          ...prev.objetos,
-          'NENHUMA DAS OPÇÕES': { ...prev.objetos['NENHUMA DAS OPÇÕES'], outros: value }
-        }
-      }));
-    } else if (type === 'checkbox') {
-      setData(prev => ({
-        ...prev,
-        objetos: { ...prev.objetos, [name]: checked },
-      }));
-    } else if (type === 'file') {
-      setData(prev => ({ ...prev, [name]: files }));
-    } else if (type === 'text' && name.startsWith('patrulhamento')) {
-      const [, distrito, field] = name.split('-');
-      setData(prev => ({
-        ...prev,
-        patrulhamento: {
-          ...prev.patrulhamento,
-          [distrito]: {
-            ...prev.patrulhamento[distrito],
-            [field]: value,
-          }
-        }
-      }));
-    } else {
+ const handleChange = (e) => {
+  const { name, value, type, checked, files } = e.target;
+
+  // Objetos específicos
+  if (type === 'checkbox' && name === 'CONE(S)') {
+    setData(prev => ({
+      ...prev,
+      objetos: { ...prev.objetos, cones: { ...prev.objetos.cones, marcado: checked } },
+    }));
+  } else if (type === 'number' && name === 'quantidadeCones') {
+    setData(prev => ({
+      ...prev,
+      objetos: { ...prev.objetos, cones: { ...prev.objetos.cones, quantidade: value } },
+    }));
+  } else if (type === 'checkbox' && name === 'NENHUMA DAS OPÇÕES') {
+    setData(prev => ({
+      ...prev,
+      objetos: { ...prev.objetos, [name]: { ...prev.objetos[name], marcado: checked } },
+    }));
+  } else if (type === 'text' && name === 'NENHUMA_OUTROS') {
+    setData(prev => ({
+      ...prev,
+      objetos: { ...prev.objetos, 'NENHUMA DAS OPÇÕES': { ...prev.objetos['NENHUMA DAS OPÇÕES'], outros: value } },
+    }));
+  } else if (type === 'checkbox') {
+    setData(prev => ({ ...prev, objetos: { ...prev.objetos, [name]: checked } }));
+  } else if (type === 'file') {
+    setData(prev => ({ ...prev, [name]: files }));
+  } 
+  // Patrulhamento
+  else if (name.startsWith('patrulhamento')) {
+    const [, item, field] = name.split('-');
+    setData(prev => ({
+      ...prev,
+      patrulhamento: {
+        ...prev.patrulhamento,
+        [item]: { ...prev.patrulhamento[item], [field]: value },
+      },
+    }));
+  }
+  // Ocorrências
+  else if (name.startsWith('ocorrencias|')) {
+  const [, item, field] = name.split('|');
+  setData(prev => ({
+    ...prev,
+    ocorrencias: {
+      ...prev.ocorrencias,
+      [item]: { ...prev.ocorrencias[item], [field]: value },
+    },
+  }));
+}
+
+
+
+else {
       setData(prev => ({ ...prev, [name]: value }));
-    }
-  };
+  }
+};
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const formDataToSend = new FormData();
-    Object.keys(data).forEach(key => {
-      if (key === 'objetos' || key === 'patrulhamento') {
-        formDataToSend.append(key, JSON.stringify(data[key]));
-      } else if (key === 'fotos' || key === 'videos') {
-        if (data[key]) {
-          for (let i = 0; i < data[key].length; i++) {
-            formDataToSend.append(key, data[key][i]);
-          }
+  const formDataToSend = new FormData();
+
+  Object.keys(data).forEach(key => {
+    if (key === 'objetos' || key === 'patrulhamento' || key === 'ocorrencias') {
+      formDataToSend.append(key, JSON.stringify(data[key]));
+      console.log(data[key])
+    } else if (key === 'fotos' || key === 'videos') {
+      if (data[key]) {
+        for (let i = 0; i < data[key].length; i++) {
+          formDataToSend.append(key, data[key][i]);
         }
-      } else {
-        formDataToSend.append(key, data[key]);
       }
+    } else {
+      formDataToSend.append(key, data[key]);
+    }
+  });
+
+  try {
+    const res = await fetch('https://rforms-co.vercel.app/api/submit', {
+      method: 'POST',
+      body: formDataToSend,
     });
 
-    try {
-      const res = await fetch('https://rforms-co.vercel.app/api/submit', {
-        method: 'POST',
-        body: formDataToSend,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: res.statusText }));
-        alert(`Erro do servidor: ${errorData.error}`);
-        return;
-      }
-
-      const result = await res.json();
-      alert(result.message || 'Relatório enviado com sucesso!');
-    } catch (err) {
-      console.error(err);
-      alert(`Erro desconhecido: ${err.message}`);
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: res.statusText }));
+      alert(`Erro do servidor: ${errorData.error}`);
+      return;
     }
-  };
+
+    const result = await res.json();
+    alert(result.message || 'Relatório enviado com sucesso!');
+  } catch (err) {
+    console.error(err);
+    alert(`Erro desconhecido: ${err.message}`);
+  }
+};
 
   return (
     <div className="form-container">
       <h1>INSPETORES GCM ATALAIA - AL</h1>
-      <h2>RELATÓRIO DE PLANTÃO</h2>
+      <h2>RELATÓRIO DIÁRIO DE PLANTÃO</h2>
+      <h2>SECRETARIA DE DEFESA SOCIAL</h2>
+      <h2>GUARDA CIVIL MUNICIPAL DE ATALAIA - AL</h2>
       <img src="/seglogoata.jpg" alt="Logo" className="site-logo" />
 
       <form onSubmit={handleSubmit} className="form-base">
@@ -235,17 +261,42 @@ export default function RelatorioPlantao() {
           {patrulhamentoList.map((item) => (
             <div key={item} className="patrulhamento-item">
               <strong>{item}</strong>
-              <input
-                type="text"
+              <textarea
                 name={`patrulhamento-${item}-primeiro`}
-                placeholder="Primeiro nome"
+                placeholder="Detalhes do patrulhamento"
                 value={data.patrulhamento[item]?.primeiro || ''}
                 onChange={handleChange}
+  rows={5} // maior altura inicial
+  style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
               />
               <p className="patrulhamento-texto">{patrulhamentoTextos[item]}</p>
             </div>
           ))}
         </fieldset>
+
+<fieldset className="radio-group">
+  <legend>OCORRÊNCIAS:</legend>
+  {ocorrenciasList.map((item) => (
+    <div key={item} className="patrulhamento-item">
+      <strong>{item}</strong>
+      <textarea
+        placeholder="Detalhes da ocorrência"
+  name={`ocorrencias|${item}|detalhes`}
+  value={data.ocorrencias[item]?.detalhes || ''}
+  onChange={handleChange}
+
+        rows={5}
+        style={{
+          width: '100%',
+          resize: 'vertical',
+          marginTop: '5px',
+          minHeight: '100px'
+        }}
+      />
+    </div>
+  ))}
+</fieldset>
+
 
         <fieldset className="observacoes-group">
           <legend>Observações:</legend>
@@ -254,7 +305,8 @@ export default function RelatorioPlantao() {
             placeholder="Escreva suas observações aqui"
             value={data.observacoes}
             onChange={handleChange}
-            rows={4}
+  rows={5} // maior altura inicial
+  style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
           />
         </fieldset>
 
