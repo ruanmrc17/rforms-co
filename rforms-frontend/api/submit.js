@@ -4,7 +4,7 @@ const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const nodemailer = require('nodemailer');
-const serverless = require('serverless-http');
+const cors = require('cors');
 
 const app = express();
 
@@ -16,6 +16,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // Middlewares
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -77,8 +78,8 @@ function generateZIP(pdfBuffer, arquivos) {
   });
 }
 
-// Rota POST /submit
-app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
+// Rota POST /api/submit
+app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
     const { nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, observacoes } = req.body;
     const objetos = JSON.parse(req.body.objetos || '{}');
@@ -96,14 +97,14 @@ app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), asyn
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'enviorforms@gmail.com', 
-        pass: 'lgni quba jihs zgox'    // senha de app
+        user: 'enviorforms@gmail.com',
+        pass: 'lgni quba jihs zgox' // senha de app
       }
     });
 
     await transporter.sendMail({
       from: '"RELATÓRIO AUTOMÁTICO" <enviorforms@gmail.com>',
-      to: 'ruanmarcos1771@gmail.com', // seu e-mail de destino
+      to: 'ruanmarcos1771@gmail.com',
       subject: `RELATÓRIO: ${nome?.toUpperCase() || 'RELATORIO'}`,
       text: 'Segue em anexo o relatório em ZIP.',
       attachments: [{ filename: 'RELATORIO.zip', content: zipBuffer }]
@@ -116,5 +117,5 @@ app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), asyn
   }
 });
 
-// Export serverless handler para Vercel
-module.exports.handler = serverless(app);
+// Export padrão para Vercel
+module.exports = app;

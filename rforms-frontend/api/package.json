@@ -1,22 +1,15 @@
 {
+  "name": "rforms-backend",
+  "version": "1.0.0",
+  "description": "Backend serverless para envio de relatórios com PDF e ZIP via email",
+  "main": "submit.js",
+  "license": "ISC",
   "dependencies": {
     "archiver": "^7.0.1",
-    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.6",
     "pdfkit": "^0.17.2"
-  },
-  "name": "rforms-backend",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node index.js --watched"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  }
 }
