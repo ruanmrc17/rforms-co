@@ -24,6 +24,20 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
+    // Função para adicionar texto grande com quebra automática
+    function addTextBlock(text, options = {}) {
+      const { width = 450, lineGap = 2 } = options;
+      if (!text) return;
+      const paragraphs = text.split('\n');
+      paragraphs.forEach(par => {
+        const lines = pdfDoc.splitTextToSize(par, width);
+        lines.forEach(line => {
+          if (pdfDoc.y > pdfDoc.page.height - 50) pdfDoc.addPage();
+          pdfDoc.text(line, { width, lineGap });
+        });
+      });
+    }
+
     // Logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     pdfDoc.image(logoPath, 450, 15, { width: 100 });
@@ -62,7 +76,7 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
     Object.keys(patrulhamento).forEach(item => {
       const detalhes = patrulhamento[item]?.primeiro || '';
-      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
+      addTextBlock(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
     });
 
     // Ocorrências
@@ -70,24 +84,25 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('OCORRÊNCIAS:');
     Object.keys(ocorrencias).forEach(item => {
       const detalhes = ocorrencias[item]?.detalhes || '';
-      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
+      addTextBlock(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
     });
 
     // Observações
     pdfDoc.moveDown();
     pdfDoc.text('OBSERVAÇÕES:');
-    pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
+    addTextBlock(observacoes?.toUpperCase() || '-');
 
-    // --- Numeração de páginas ---
-    pdfDoc.end(); // primeiro finaliza o PDF para que o bufferPages funcione
-    pdfDoc.on('end', () => {
-      const range = pdfDoc.bufferedPageRange(); // { start: 0, count: X }
-      for (let i = 0; i < range.count; i++) {
-        pdfDoc.switchToPage(i);
-        pdfDoc.fontSize(10)
-              .text(`Página ${i + 1} de ${range.count}`, 0, pdfDoc.page.height - 30, { align: 'center' });
-      }
-    });
+    // Numeração das páginas na parte inferior direita
+    const range = pdfDoc.bufferedPageRange(); // { start: 0, count: X }
+    for (let i = 0; i < range.count; i++) {
+      pdfDoc.switchToPage(i);
+      pdfDoc.fontSize(10)
+            .text(`${i + 1}`, pdfDoc.page.width - 50, pdfDoc.page.height - 30, {
+              align: 'right'
+            });
+    }
+
+    pdfDoc.end();
   });
 }
 
