@@ -107,7 +107,7 @@ export default function RelatorioPlantao() {
   });
 
   try {
-    const res = await fetch('/submit', { // 🔥 relativo ao domínio do Vercel
+    const res = await fetch('/api/submit', { // 🔥 relativo ao domínio do Vercel
       method: 'POST',
       body: formDataToSend,
     });
