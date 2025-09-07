@@ -4,7 +4,7 @@ const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const nodemailer = require('nodemailer');
-const serverless = require('serverless-http');
+const cors = require('cors');
 
 const app = express();
 
@@ -16,6 +16,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // Middlewares
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -57,7 +58,7 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
 }
 
 // Função para criar ZIP em memória
-function generateZIP(pdfBuffer, arquivos) {
+function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
   return new Promise((resolve, reject) => {
     const zipChunks = [];
     const archive = archiver('zip', { zlib: { level: 9 } });
@@ -66,8 +67,8 @@ function generateZIP(pdfBuffer, arquivos) {
     archive.on('error', err => reject(err));
     archive.on('finish', () => resolve(Buffer.concat(zipChunks)));
 
-    // Adicionar PDF
-    archive.append(pdfBuffer, { name: 'RELATORIO.pdf' });
+    // Adicionar PDF com nome personalizado
+    archive.append(pdfBuffer, { name: `${nomeArquivoPDF}.pdf` });
 
     // Adicionar fotos e vídeos
     if (arquivos.fotos) arquivos.fotos.forEach(f => archive.append(f.buffer, { name: `FOTOS/${f.originalname}` }));
@@ -77,15 +78,23 @@ function generateZIP(pdfBuffer, arquivos) {
   });
 }
 
-// Rota POST /submit
-app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
+// Rota POST /api/submit
+app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
     const { nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, observacoes } = req.body;
     const objetos = JSON.parse(req.body.objetos || '{}');
     const patrulhamento = JSON.parse(req.body.patrulhamento || '{}');
 
+    // Gerar PDF
     const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes });
-    const zipBuffer = await generateZIP(pdfBuffer, req.files);
+
+    // Nome baseado em matrícula e data atual
+    const hoje = new Date();
+    const dataAtual = `${hoje.getDate().toString().padStart(2, '0')}-${(hoje.getMonth()+1).toString().padStart(2, '0')}-${hoje.getFullYear()}`;
+    const arquivoNome = `${matricula}-${dataAtual}`;
+
+    // Gerar ZIP com PDF e arquivos
+    const zipBuffer = await generateZIP(pdfBuffer, req.files, arquivoNome);
 
     // Verificar tamanho antes de enviar
     if (zipBuffer.length > MAX_EMAIL_SIZE) {
@@ -96,17 +105,18 @@ app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), asyn
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'enviorforms@gmail.com', 
-        pass: 'lgni quba jihs zgox'    // senha de app
+        user: 'enviorforms@gmail.com',
+        pass: 'lgni quba jihs zgox' // senha de app
       }
     });
 
+    // Enviar email com ZIP
     await transporter.sendMail({
       from: '"RELATÓRIO AUTOMÁTICO" <enviorforms@gmail.com>',
-      to: 'ruanmarcos1771@gmail.com', // seu e-mail de destino
-      subject: `RELATÓRIO: ${nome?.toUpperCase() || 'RELATORIO'}`,
+      to: 'ruanmarcos1771@gmail.com',
+      subject: `RELATÓRIO: ${arquivoNome}`,
       text: 'Segue em anexo o relatório em ZIP.',
-      attachments: [{ filename: 'RELATORIO.zip', content: zipBuffer }]
+      attachments: [{ filename: `${arquivoNome}.zip`, content: zipBuffer }]
     });
 
     return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
@@ -116,5 +126,5 @@ app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), asyn
   }
 });
 
-// Export serverless handler para Vercel
-module.exports.handler = serverless(app);
+// Export padrão para Vercel
+module.exports = app;
