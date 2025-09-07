@@ -30,7 +30,7 @@ h1, h2 {
 .field-group {
   display: flex;
   gap: 1rem;
-  align-items: left;
+  align-items: center;
   flex-wrap: wrap;
 }
 
@@ -52,7 +52,7 @@ h1, h2 {
   border-radius: 6px;
   background-color: #fdfdfd;
   font-size: 0.95rem;
-  text-align: center;
+  text-align: left;
   transition: all 0.3s ease;
 }
 
