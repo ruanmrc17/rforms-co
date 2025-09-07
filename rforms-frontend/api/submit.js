@@ -76,9 +76,7 @@ function generateZIP(pdfBuffer, arquivos) {
 
     archive.finalize();
   });
-
 }
-
 // Rota POST /api/submit
 app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
@@ -142,3 +140,7 @@ app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), asyn
     return res.status(500).json({ error: 'Erro ao gerar ou enviar o relatório' });
   }
 });
+
+
+// Export padrão para Vercel
+module.exports = app;
