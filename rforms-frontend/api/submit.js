@@ -77,7 +77,6 @@ function generateZIP(pdfBuffer, arquivos) {
     archive.finalize();
   });
 }
-
 // Rota POST /api/submit
 app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
@@ -87,6 +86,16 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
 
     const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes });
     const zipBuffer = await generateZIP(pdfBuffer, req.files);
+
+    // Criar nome com matrícula e data atual
+    const now = new Date();
+    const dia = String(now.getDate()).padStart(2, '0');
+    const mes = String(now.getMonth() + 1).padStart(2, '0'); // Meses começam do 0
+    const ano = now.getFullYear();
+    const dataAtual = `${dia}${mes}${ano}`;
+
+    const zipFileName = `${matricula}-${dataAtual}.zip`;
+    const pdfFileName = `${matricula}-${dataAtual}.pdf`;
 
     // Verificar tamanho antes de enviar
     if (zipBuffer.length > MAX_EMAIL_SIZE) {
@@ -105,12 +114,12 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
     await transporter.sendMail({
       from: '"RELATÓRIO AUTOMÁTICO" <enviorforms@gmail.com>',
       to: 'ruanmarcos1771@gmail.com',
-      subject: `RELATÓRIO: ${nome?.toUpperCase() || 'RELATORIO'}`,
+      subject: `RELATÓRIO: ${matricula}-${dataAtual}`,
       text: 'Segue em anexo o relatório em ZIP.',
-      attachments: [{ filename: 'RELATORIO.zip', content: zipBuffer }]
+      attachments: [{ filename: zipFileName, content: zipBuffer }]
     });
 
-    return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
+    return res.status(200).json({ message: `Relatório enviado com sucesso! Nome do arquivo: ${zipFileName}` });
   } catch (err) {
     console.error('Erro no backend:', err);
     return res.status(500).json({ error: 'Erro ao gerar ou enviar o relatório' });
