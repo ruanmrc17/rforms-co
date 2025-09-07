@@ -76,7 +76,9 @@ function generateZIP(pdfBuffer, arquivos) {
 
     archive.finalize();
   });
+
 }
+
 // Rota POST /api/submit
 app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
@@ -84,18 +86,32 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
     const objetos = JSON.parse(req.body.objetos || '{}');
     const patrulhamento = JSON.parse(req.body.patrulhamento || '{}');
 
+    // Gerar PDF
     const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes });
-    const zipBuffer = await generateZIP(pdfBuffer, req.files);
 
-    // Criar nome com matrícula e data atual
-    const now = new Date();
-    const dia = String(now.getDate()).padStart(2, '0');
-    const mes = String(now.getMonth() + 1).padStart(2, '0'); // Meses começam do 0
-    const ano = now.getFullYear();
-    const dataAtual = `${dia}${mes}${ano}`;
+    // Nome baseado em matrícula e data atual
+    const hoje = new Date();
+    const dataAtual = `${hoje.getDate().toString().padStart(2, '0')}-${(hoje.getMonth()+1).toString().padStart(2, '0')}-${hoje.getFullYear()}`;
+    const arquivoNome = `${matricula}-${dataAtual}`;
 
-    const zipFileName = `${matricula}-${dataAtual}.zip`;
-    const pdfFileName = `${matricula}-${dataAtual}.pdf`;
+    // Gerar ZIP com PDF e arquivos
+    const zipBuffer = await new Promise((resolve, reject) => {
+      const zipChunks = [];
+      const archive = archiver('zip', { zlib: { level: 9 } });
+
+      archive.on('data', chunk => zipChunks.push(chunk));
+      archive.on('error', err => reject(err));
+      archive.on('finish', () => resolve(Buffer.concat(zipChunks)));
+
+      // Adicionar PDF com nome personalizado
+      archive.append(pdfBuffer, { name: `${arquivoNome}.pdf` });
+
+      // Adicionar fotos e vídeos
+      if (req.files.fotos) req.files.fotos.forEach(f => archive.append(f.buffer, { name: `FOTOS/${f.originalname}` }));
+      if (req.files.videos) req.files.videos.forEach(v => archive.append(v.buffer, { name: `VIDEOS/${v.originalname}` }));
+
+      archive.finalize();
+    });
 
     // Verificar tamanho antes de enviar
     if (zipBuffer.length > MAX_EMAIL_SIZE) {
@@ -111,20 +127,18 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
       }
     });
 
+    // Enviar email com ZIP
     await transporter.sendMail({
       from: '"RELATÓRIO AUTOMÁTICO" <enviorforms@gmail.com>',
       to: 'ruanmarcos1771@gmail.com',
-      subject: `RELATÓRIO: ${matricula}-${dataAtual}`,
+      subject: `RELATÓRIO: ${arquivoNome}`,
       text: 'Segue em anexo o relatório em ZIP.',
-      attachments: [{ filename: zipFileName, content: zipBuffer }]
+      attachments: [{ filename: `${arquivoNome}.zip`, content: zipBuffer }]
     });
 
-    return res.status(200).json({ message: `Relatório enviado com sucesso! Nome do arquivo: ${zipFileName}` });
+    return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
   } catch (err) {
     console.error('Erro no backend:', err);
     return res.status(500).json({ error: 'Erro ao gerar ou enviar o relatório' });
   }
 });
-
-// Export padrão para Vercel
-module.exports = app;
