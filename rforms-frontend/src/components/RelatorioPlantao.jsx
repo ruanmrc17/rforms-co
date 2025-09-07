@@ -10,7 +10,8 @@ export default function RelatorioPlantao() {
     dataSaida: '',
     horaSaida: '',
     objetos: {
-      cones: { marcado: false, quantidade: 1 } // objeto para cones
+      cones: { marcado: false, quantidade: 1 },
+      'NENHUMA DAS OPÇÕES': { marcado: false, outros: '' },
     },
     patrulhamento: {},
     observacoes: '',
@@ -24,12 +25,11 @@ export default function RelatorioPlantao() {
     'CAMÊRA CORPORAL',
     'CARREGADOR DE CAMÊRA CORPORAL',
     'OUTROS / TIRAR FOTO OU VÍDEO',
-    'NENHUMA DAS OPÇÕES',
   ];
 
   const patrulhamentoList = [
     'DISTRITO BOCA DA MATA',
-    'POVOADO OLHOS D’ÁGUA',
+    "POVOADO OLHOS D’ÁGUA",
     'DISTRITO SANTO ANTÔNIO',
     'VILA JOSÉ PAULINO',
     'CENTRO',
@@ -74,6 +74,22 @@ export default function RelatorioPlantao() {
           cones: { ...prev.objetos.cones, quantidade: value }
         }
       }));
+    } else if (type === 'checkbox' && name === 'NENHUMA DAS OPÇÕES') {
+      setData(prev => ({
+        ...prev,
+        objetos: {
+          ...prev.objetos,
+          [name]: { ...prev.objetos[name], marcado: checked }
+        }
+      }));
+    } else if (type === 'text' && name === 'NENHUMA_OUTROS') {
+      setData(prev => ({
+        ...prev,
+        objetos: {
+          ...prev.objetos,
+          'NENHUMA DAS OPÇÕES': { ...prev.objetos['NENHUMA DAS OPÇÕES'], outros: value }
+        }
+      }));
     } else if (type === 'checkbox') {
       setData(prev => ({
         ...prev,
@@ -115,10 +131,6 @@ export default function RelatorioPlantao() {
         formDataToSend.append(key, data[key]);
       }
     });
-
-    console.log("=== Dados do state (antes de enviar) ===", data);
-    console.log("=== Dados do FormData (após montar) ===");
-    for (let pair of formDataToSend.entries()) console.log(pair[0], pair[1]);
 
     try {
       const res = await fetch('https://rforms-co.vercel.app/api/submit', {
@@ -195,6 +207,27 @@ export default function RelatorioPlantao() {
               {item}
             </label>
           ))}
+
+          <label>
+            <input
+              type="checkbox"
+              name="NENHUMA DAS OPÇÕES"
+              checked={data.objetos['NENHUMA DAS OPÇÕES'].marcado}
+              onChange={handleChange}
+            />
+            NENHUMA DAS OPÇÕES
+          </label>
+
+          {data.objetos['NENHUMA DAS OPÇÕES'].marcado && (
+            <input
+              type="text"
+              name="NENHUMA_OUTROS"
+              placeholder="Quais materiais foram encontrados?"
+              value={data.objetos['NENHUMA DAS OPÇÕES'].outros}
+              onChange={handleChange}
+              style={{ marginLeft: '10px', width: '300px' }}
+            />
+          )}
         </fieldset>
 
         <fieldset className="radio-group">

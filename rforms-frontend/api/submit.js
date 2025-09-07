@@ -1,11 +1,10 @@
-// /api/submit.js
 const express = require('express');
 const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const path = require('path'); // para resolver caminho de forma segura
+const path = require('path');
 
 const app = express();
 const MAX_EMAIL_SIZE = 25 * 1024 * 1024; // 25MB
@@ -17,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
+// Função para gerar PDF
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -25,15 +24,13 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // Caminho da imagem do logo (ajuste conforme sua estrutura)
-    const logoPath = path.join(__dirname, '/seglogoata.jpg');
+    // Logo no canto superior direito
+    const logoPath = path.join(__dirname, 'seglogoata.jpg');
+    pdfDoc.image(logoPath, 450, 15, { width: 100 });
 
-    // Adiciona o logo no canto superior direito
-    pdfDoc.image(logoPath, 450, 15, { width: 100 }); // x=450, y=15, width=100px
-
-    // Título centralizado
+    // Título e subtítulo centralizados
     pdfDoc.fontSize(18).text('RELATÓRIO DE PLANTÃO', { align: 'center' });
-    pdfDoc.fontSize(14).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
+    pdfDoc.fontSize(10).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
     pdfDoc.moveDown();
 
     // Informações principais
@@ -49,11 +46,16 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
       const qtd = parseInt(objetos.cones.quantidade) || 0;
       pdfDoc.text(`- ${qtd} CONE(S)`);
     }
+
     Object.keys(objetos).forEach(item => {
-      if (item !== 'cones' && objetos[item]) {
+      if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
         pdfDoc.text(`- ${item.toUpperCase()}`);
       }
     });
+
+    if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
+      pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
+    }
 
     // PATRULHAMENTO
     pdfDoc.moveDown();
@@ -72,7 +74,7 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
   });
 }
 
-// Função para criar ZIP
+// Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
   return new Promise((resolve, reject) => {
     const zipChunks = [];
@@ -90,9 +92,10 @@ function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
     archive.finalize();
   });
 }
+
+// Rota POST /api/submit
 app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
-    // Extrair campos do FormData
     const {
       nome = '',
       matricula = '',
@@ -103,26 +106,21 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
       observacoes = ''
     } = req.body;
 
-    // OBJETOS e PATRULHAMENTO podem vir como string JSON ou objeto
     let objetos = {};
     let patrulhamento = {};
 
     if (req.body.objetos) {
-      if (typeof req.body.objetos === 'string') objetos = JSON.parse(req.body.objetos);
-      else objetos = req.body.objetos;
+      objetos = typeof req.body.objetos === 'string' ? JSON.parse(req.body.objetos) : req.body.objetos;
     }
 
     if (req.body.patrulhamento) {
-      if (typeof req.body.patrulhamento === 'string') patrulhamento = JSON.parse(req.body.patrulhamento);
-      else patrulhamento = req.body.patrulhamento;
+      patrulhamento = typeof req.body.patrulhamento === 'string' ? JSON.parse(req.body.patrulhamento) : req.body.patrulhamento;
     }
 
-    // Garantir que quantidade de cones seja número
     if (objetos.cones?.quantidade) objetos.cones.quantidade = parseInt(objetos.cones.quantidade) || 0;
 
-    // Debug: log do que chegou
-    console.log('OBJETOS:', objetos);
-    console.log('PATRULHAMENTO:', patrulhamento);
+    console.log('OBJETOS RECEBIDOS:', objetos);
+    console.log('PATRULHAMENTO RECEBIDO:', patrulhamento);
 
     const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes });
 
@@ -153,11 +151,11 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
     });
 
     return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
+
   } catch (err) {
     console.error('Erro no backend:', err);
     return res.status(500).json({ error: 'Erro ao gerar ou enviar o relatório' });
   }
 });
-
 
 module.exports = app;
