@@ -33,6 +33,7 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
 
     // Título centralizado
     pdfDoc.fontSize(18).text('RELATÓRIO DE PLANTÃO', { align: 'center' });
+    pdfDoc.fontSize(14).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
     pdfDoc.moveDown();
 
     // Informações principais
