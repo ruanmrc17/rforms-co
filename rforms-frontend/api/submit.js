@@ -20,25 +20,10 @@ app.use(express.urlencoded({ extended: true }));
 
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
-    const pdfDoc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
+    const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
-
-    // Função para adicionar texto grande com quebra automática
-    function addTextBlock(text, options = {}) {
-      const { width = 450, lineGap = 2 } = options;
-      if (!text) return;
-
-      const paragraphs = text.split('\n');
-      paragraphs.forEach(par => {
-        const lines = pdfDoc.splitTextToSize(par, width);
-        lines.forEach(line => {
-          if (pdfDoc.y > pdfDoc.page.height - 50) pdfDoc.addPage();
-          pdfDoc.text(line, { width, lineGap });
-        });
-      });
-    }
 
     // Logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
@@ -64,15 +49,13 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
       const qtd = parseInt(objetos.cones.quantidade) || 0;
       pdfDoc.text(`- ${qtd} CONE(S)`);
     }
-
     Object.keys(objetos).forEach(item => {
       if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
         pdfDoc.text(`- ${item.toUpperCase()}`);
       }
     });
-
     if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
-      addTextBlock(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
+      pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
     }
 
     // Patrulhamento
@@ -80,7 +63,7 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
     Object.keys(patrulhamento).forEach(item => {
       const detalhes = patrulhamento[item]?.primeiro || '';
-      addTextBlock(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
     });
 
     // Ocorrências
@@ -88,25 +71,23 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('OCORRÊNCIAS:');
     Object.keys(ocorrencias).forEach(item => {
       const detalhes = ocorrencias[item]?.detalhes || '';
-      addTextBlock(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
     });
 
     // Observações
     pdfDoc.moveDown();
     pdfDoc.text('OBSERVAÇÕES:');
-    addTextBlock(observacoes?.toUpperCase() || '-');
+    pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
 
     // Numeração de páginas
-    const range = pdfDoc.bufferedPageRange();
-    for (let i = 0; i < range.count; i++) {
-      pdfDoc.switchToPage(i);
-      pdfDoc.fontSize(10)
-            .text(`Página ${i + 1} de ${range.count}`, 0, pdfDoc.page.height - 30, { align: 'center' });
-    }
+    pdfDoc.on('pageAdded', () => {
+      pdfDoc.text(`Página ${pdfDoc.page.number}`, 0, pdfDoc.page.height - 30, { align: 'center' });
+    });
 
     pdfDoc.end();
   });
 }
+
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
   return new Promise((resolve, reject) => {
