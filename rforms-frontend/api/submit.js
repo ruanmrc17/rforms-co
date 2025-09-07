@@ -16,93 +16,107 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Função para gerar PDF
+const fs = require('fs'); // opcional se quiser salvar
+const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const fetch = require('node-fetch'); // para carregar imagens do filesystem ou URL
 
-const PDFDocument = require('pdfkit');
-const path = require('path');
+async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
+  // Cria um novo PDF
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
-  return new Promise((resolve, reject) => {
+  // Função para adicionar uma página com conteúdo
+  function addPage(contentLines = []) {
+    const page = pdfDoc.addPage([595, 842]); // A4
+    const { width, height } = page.getSize();
+    let y = height - 50;
+
+    // Logo (precisa converter em Uint8Array)
     try {
-      const pdfDoc = new PDFDocument({ size: 'A4', margin: 50, autoFirstPage: true });
-      const chunks = [];
-      pdfDoc.on('data', chunk => chunks.push(chunk));
-      pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
-
-      // Função para adicionar rodapé da página atual
-      const addFooter = (doc) => {
-        const bottom = doc.page.height - 30;
-        doc.fontSize(10)
-          .text(`Página ${doc.page.number}`, 0, bottom, { align: 'center' });
-      };
-
-      // Adiciona rodapé toda vez que uma nova página é criada
-      pdfDoc.on('pageAdded', () => addFooter(pdfDoc));
-
-      // Adiciona a primeira página automaticamente
-      addFooter(pdfDoc);
-
-      // --- Conteúdo do PDF ---
-
-      // Logo
       const logoPath = path.join(__dirname, 'seglogoata.jpg');
-      pdfDoc.image(logoPath, 450, 15, { width: 100 });
-
-      // Títulos
-      pdfDoc.fontSize(18).text('RELATÓRIO DIÁRIO DE PLANTÃO', { align: 'center' });
-      pdfDoc.fontSize(10).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
-      pdfDoc.fontSize(10).text('SECRETARIA DE DEFESA SOCIAL', { align: 'center' });
-      pdfDoc.fontSize(10).text('GUARDA CIVIL MUNICIPAL DE ATALAIA - AL', { align: 'center' });
-      pdfDoc.moveDown();
-
-      // Informações principais
-      pdfDoc.fontSize(12).text(`NOME: ${nome?.toUpperCase() || '-'}`);
-      pdfDoc.text(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
-      pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
-      pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
-      pdfDoc.moveDown();
-
-      // Objetos
-      pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
-      if (objetos.cones?.marcado) {
-        const qtd = parseInt(objetos.cones.quantidade) || 0;
-        pdfDoc.text(`- ${qtd} CONE(S)`);
-      }
-      Object.keys(objetos).forEach(item => {
-        if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
-          pdfDoc.text(`- ${item.toUpperCase()}`);
-        }
-      });
-      if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
-        pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
-      }
-
-      // Patrulhamento
-      pdfDoc.moveDown();
-      pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
-      Object.keys(patrulhamento).forEach(item => {
-        const detalhes = patrulhamento[item]?.primeiro || '';
-        pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
-      });
-
-      // Ocorrências
-      pdfDoc.moveDown();
-      pdfDoc.text('OCORRÊNCIAS:');
-      Object.keys(ocorrencias).forEach(item => {
-        const detalhes = ocorrencias[item]?.detalhes || '';
-        pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
-      });
-
-      // Observações
-      pdfDoc.moveDown();
-      pdfDoc.text('OBSERVAÇÕES:');
-      pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
-
-      // Fecha o PDF
-      pdfDoc.end();
+      const logoBytes = fs.readFileSync(logoPath);
+      const image = pdfDoc.embedJpg(logoBytes);
+      const imageDims = image.scale(0.2); // ajusta tamanho
+      page.drawImage(image, { x: width - imageDims.width - 50, y: height - imageDims.height - 30, width: imageDims.width, height: imageDims.height });
     } catch (err) {
-      reject(err);
+      console.log('Logo não encontrada ou erro:', err.message);
+    }
+
+    // Adiciona cada linha de conteúdo
+    const lineHeight = 14;
+    contentLines.forEach(line => {
+      if (y < 50) {
+        // Nova página
+        y = height - 50;
+        addPage(contentLines.slice(contentLines.indexOf(line)));
+        return;
+      }
+      page.drawText(line, { x: 50, y, size: 12, font });
+      y -= lineHeight;
+    });
+
+    return page;
+  }
+
+  // Prepara conteúdo em linhas
+  const lines = [];
+  lines.push('RELATÓRIO DIÁRIO DE PLANTÃO');
+  lines.push('INSPETORES GCM ATALAIA - AL');
+  lines.push('SECRETARIA DE DEFESA SOCIAL');
+  lines.push('GUARDA CIVIL MUNICIPAL DE ATALAIA - AL');
+  lines.push('');
+  lines.push(`NOME: ${nome?.toUpperCase() || '-'}`);
+  lines.push(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
+  lines.push(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
+  lines.push(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
+  lines.push('');
+  lines.push('OBJETOS ENCONTRADOS NA BASE:');
+
+  if (objetos.cones?.marcado) {
+    const qtd = parseInt(objetos.cones.quantidade) || 0;
+    lines.push(`- ${qtd} CONE(S)`);
+  }
+  Object.keys(objetos).forEach(item => {
+    if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
+      lines.push(`- ${item.toUpperCase()}`);
     }
   });
+  if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
+    lines.push(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
+  }
+
+  lines.push('');
+  lines.push('PATRULHAMENTO PREVENTIVO:');
+  Object.keys(patrulhamento).forEach(item => {
+    const detalhes = patrulhamento[item]?.primeiro || '';
+    lines.push(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+  });
+
+  lines.push('');
+  lines.push('OCORRÊNCIAS:');
+  Object.keys(ocorrencias).forEach(item => {
+    const detalhes = ocorrencias[item]?.detalhes || '';
+    lines.push(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+  });
+
+  lines.push('');
+  lines.push('OBSERVAÇÕES:');
+  lines.push(observacoes?.toUpperCase() || '-');
+
+  // Adiciona página com todas as linhas
+  const page = await addPage(lines);
+
+  // Numeração de páginas
+  const pages = pdfDoc.getPages();
+  pages.forEach((p, idx) => {
+    const { width } = p.getSize();
+    p.drawText(`Página ${idx + 1} de ${pages.length}`, { x: 0, y: 20, size: 10, font, color: rgb(0,0,0), width, align: 'center' });
+  });
+
+  // Retorna buffer em memória
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
 
 // Função para gerar ZIP
