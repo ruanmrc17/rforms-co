@@ -16,34 +16,38 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Função simplificada para gerar PDF
-function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
+function generatePDF(data) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
+    let pageNumber = 1;
 
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // Função simples para quebrar texto
+    function addPage() {
+      if (pageNumber > 1) pdfDoc.addPage();
+      pdfDoc.fontSize(10).text(`Página ${pageNumber}`, pdfDoc.page.width - 70, pdfDoc.page.height - 30);
+      pageNumber++;
+    }
+
     function addTextBlock(text) {
       if (!text) return;
       const lines = text.split('\n');
       lines.forEach(line => {
-        if (pdfDoc.y > pdfDoc.page.height - 80) {
-          pdfDoc.addPage();
-        }
+        if (pdfDoc.y > pdfDoc.page.height - 80) addPage();
         pdfDoc.text(line, { width: 500 });
       });
     }
 
-    // Logo
+    // Primeira página
+    addPage();
+
+    // Logo (opcional)
     try {
       const logoPath = path.join(__dirname, 'seglogoata.jpg');
       pdfDoc.image(logoPath, 450, 15, { width: 100 });
-    } catch (err) {
-      console.log('Logo não encontrada, pulando...');
-    }
+    } catch {}
 
     // Títulos
     pdfDoc.fontSize(18).text('RELATÓRIO DIÁRIO DE PLANTÃO', { align: 'center' });
@@ -53,58 +57,51 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.moveDown();
 
     // Informações principais
-    pdfDoc.fontSize(12).text(`NOME: ${nome || '-'}`);
-    pdfDoc.text(`MATRÍCULA: ${matricula || '-'}`);
-    pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
-    pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
+    pdfDoc.fontSize(12).text(`NOME: ${data.nome || '-'}`);
+    pdfDoc.text(`MATRÍCULA: ${data.matricula || '-'}`);
+    pdfDoc.text(`DATA INÍCIO: ${data.dataInicio || '-'} - HORA INÍCIO: ${data.horaInicio || '-'}`);
+    pdfDoc.text(`DATA SAÍDA: ${data.dataSaida || '-'} - HORA SAÍDA: ${data.horaSaida || '-'}`);
     pdfDoc.moveDown();
 
     // Objetos
     pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
-    if (objetos.cones?.marcado) {
-      const qtd = parseInt(objetos.cones.quantidade) || 0;
+    if (data.objetos?.cones?.marcado) {
+      const qtd = parseInt(data.objetos.cones.quantidade) || 0;
       pdfDoc.text(`- ${qtd} CONE(S)`);
     }
-    Object.keys(objetos).forEach(item => {
-      if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
+    Object.keys(data.objetos || {}).forEach(item => {
+      if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && data.objetos[item]) {
         pdfDoc.text(`- ${item}`);
       }
     });
-    if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
-      pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros}`);
+    if (data.objetos?.['NENHUMA DAS OPÇÕES']?.marcado && data.objetos['NENHUMA DAS OPÇÕES'].outros) {
+      pdfDoc.text(`- ${data.objetos['NENHUMA DAS OPÇÕES'].outros}`);
     }
 
     // Patrulhamento
     pdfDoc.moveDown();
     pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
-    Object.keys(patrulhamento).forEach(item => {
-      addTextBlock(`- ${item}: ${patrulhamento[item]?.primeiro || ''}`);
+    Object.keys(data.patrulhamento || {}).forEach(item => {
+      addTextBlock(`- ${item}: ${data.patrulhamento[item]?.primeiro || ''}`);
     });
 
     // Ocorrências
     pdfDoc.moveDown();
     pdfDoc.text('OCORRÊNCIAS:');
-    Object.keys(ocorrencias).forEach(item => {
-      addTextBlock(`- ${item}: ${ocorrencias[item]?.detalhes || ''}`);
+    Object.keys(data.ocorrencias || {}).forEach(item => {
+      addTextBlock(`- ${item}: ${data.ocorrencias[item]?.detalhes || ''}`);
     });
 
     // Observações
     pdfDoc.moveDown();
     pdfDoc.text('OBSERVAÇÕES:');
-    addTextBlock(observacoes || '-');
-
-    // Numeração básica de páginas
-    const pageCount = pdfDoc.bufferedPageRange ? pdfDoc.bufferedPageRange().count : pdfDoc._pageBuffer.length;
-    for (let i = 0; i < pdfDoc._root.data.Pages.data.Count; i++) {
-      pdfDoc.switchToPage(i);
-      pdfDoc.fontSize(10).text(`Página ${i + 1}`, pdfDoc.page.width - 50, pdfDoc.page.height - 30, { align: 'right' });
-    }
+    addTextBlock(data.observacoes || '-');
 
     pdfDoc.end();
   });
 }
 
-// Função para gerar ZIP (igual anterior)
+// ZIP generator (igual antes)
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
   return new Promise((resolve, reject) => {
     const zipChunks = [];
@@ -126,7 +123,7 @@ function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
 // Endpoint
 app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
-    const { nome = '', matricula = '', dataInicio = '', horaInicio = '', dataSaida = '', horaSaida = '', observacoes = '' } = req.body;
+    const { nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, observacoes } = req.body;
 
     let objetos = req.body.objetos ? (typeof req.body.objetos === 'string' ? JSON.parse(req.body.objetos) : req.body.objetos) : {};
     let patrulhamento = req.body.patrulhamento ? (typeof req.body.patrulhamento === 'string' ? JSON.parse(req.body.patrulhamento) : req.body.patrulhamento) : {};
@@ -142,9 +139,7 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
 
     const zipBuffer = await generateZIP(pdfBuffer, req.files, arquivoNome);
 
-    if (zipBuffer.length > MAX_EMAIL_SIZE) {
-      return res.status(400).json({ error: 'Arquivo muito grande para envio por e-mail. Apenas PDF será enviado.' });
-    }
+    if (zipBuffer.length > MAX_EMAIL_SIZE) return res.status(400).json({ error: 'Arquivo muito grande para envio por e-mail. Apenas PDF será enviado.' });
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -160,7 +155,6 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
     });
 
     return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
-
   } catch (err) {
     console.error('Erro no backend:', err);
     return res.status(500).json({ error: 'Erro ao gerar ou enviar o relatório' });
