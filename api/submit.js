@@ -97,14 +97,14 @@ app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), asyn
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'enviorfomrs@gmail.com',      // substitua pelo seu e-mail
+        user: 'eviorforms@gmail.com',      // substitua pelo seu e-mail
         pass: 'lgni quba jihs zgox'          // senha de app do Gmail
       }
     });
 
     await transporter.sendMail({
-      from: '"RELATÓRIO AUTOMÁTICO" <SEU_EMAIL@gmail.com>',
-      to: 'DESTINO_EMAIL@gmail.com',      // seu e-mail de destino
+      from: '"RELATÓRIO AUTOMÁTICO" <enviorforms@gmail.com>',
+      to: 'ruanmarcos1771@gmail.com',      // seu e-mail de destino
       subject: `RELATÓRIO: ${nome?.toUpperCase() || 'RELATORIO'}`,
       text: 'Segue em anexo o relatório em ZIP.',
       attachments: [{ filename: 'RELATORIO.zip', content: zipBuffer }]
