@@ -17,7 +17,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para gerar PDF
-
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -25,34 +24,33 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // Função para numerar página
-    function addPageNumber() {
-      const bottom = pdfDoc.page.height - 30;
-      const pageNumber = pdfDoc.page.number;
-      pdfDoc.fontSize(8).fillColor('gray');
-      pdfDoc.text(`Página ${pageNumber}`, 0, bottom, { align: 'right' });
-      pdfDoc.fillColor('black'); // reset cor
+    // Função para adicionar número de página em preto
+    function addPageNumber(doc) {
+      const bottom = doc.page.height - 30;
+      const pageNumber = doc.page.number;
+      doc.fontSize(8).fillColor('black');
+      doc.text(`Página ${pageNumber}`, 0, bottom, { align: 'right' });
     }
 
-    // Logo
+    // Sempre que uma nova página for criada
+    pdfDoc.on('pageAdded', () => addPageNumber(pdfDoc));
+
+    // Conteúdo do PDF
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     pdfDoc.image(logoPath, 450, 15, { width: 100 });
 
-    // Títulos
     pdfDoc.fontSize(18).text('RELATÓRIO DIÁRIO DE PLANTÃO', { align: 'center' });
     pdfDoc.fontSize(10).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
     pdfDoc.fontSize(10).text('SECRETARIA DE DEFESA SOCIAL', { align: 'center' });
     pdfDoc.fontSize(10).text('GUARDA CIVIL MUNICIPAL DE ATALAIA - AL', { align: 'center' });
     pdfDoc.moveDown();
 
-    // Informações principais
     pdfDoc.fontSize(12).text(`NOME: ${nome?.toUpperCase() || '-'}`);
     pdfDoc.text(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
     pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
     pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
     pdfDoc.moveDown();
 
-    // Objetos
     pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
     if (objetos.cones?.marcado) {
       const qtd = parseInt(objetos.cones.quantidade) || 0;
@@ -67,7 +65,6 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
       pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
     }
 
-    // Patrulhamento
     pdfDoc.moveDown();
     pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
     Object.keys(patrulhamento).forEach(item => {
@@ -75,7 +72,6 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
       pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
     });
 
-    // Ocorrências
     pdfDoc.moveDown();
     pdfDoc.text('OCORRÊNCIAS:');
     Object.keys(ocorrencias).forEach(item => {
@@ -83,14 +79,12 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
       pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
     });
 
-    // Observações
     pdfDoc.moveDown();
     pdfDoc.text('OBSERVAÇÕES:');
     pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
 
-    // Numeração de páginas
-    addPageNumber(); // primeira página
-    pdfDoc.on('pageAdded', addPageNumber); // novas páginas
+    // Número da primeira página
+    addPageNumber(pdfDoc);
 
     pdfDoc.end();
   });
