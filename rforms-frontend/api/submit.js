@@ -24,6 +24,23 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
+    // Função para adicionar número de página
+    function addPageNumber(doc) {
+      const range = doc.bufferedPageRange(); // { start: 0, count: X }
+      for (let i = 0; i < range.count; i++) {
+        doc.switchToPage(i);
+        doc.fontSize(10)
+           .text(`${i + 1}`, doc.page.width - 50, doc.page.height - 30, {
+             align: 'right'
+           });
+      }
+    }
+
+    // Evento para quando uma nova página for criada
+    pdfDoc.on('pageAdded', () => {
+      // Podemos atualizar rodapé aqui se necessário
+    });
+
     // Logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     pdfDoc.image(logoPath, 450, 15, { width: 100 });
@@ -69,19 +86,19 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
 
     // Ocorrências
     pdfDoc.moveDown();
-    // console.log(ocorrencias)
-pdfDoc.text('OCORRÊNCIAS:');
+    pdfDoc.text('OCORRÊNCIAS:');
     Object.keys(ocorrencias).forEach(item => {
-  const detalhes = ocorrencias[item]?.detalhes || '';
-  pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
-});
-
-
+      const detalhes = ocorrencias[item]?.detalhes || '';
+      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+    });
 
     // Observações
     pdfDoc.moveDown();
     pdfDoc.text('OBSERVAÇÕES:');
     pdfDoc.text(observacoes?.toUpperCase() || '-');
+
+    // Adiciona números de página antes de finalizar
+    addPageNumber(pdfDoc);
 
     pdfDoc.end();
   });
