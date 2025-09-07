@@ -1,0 +1,73 @@
+/* === Navegação === */
+nav {
+  display: flex;
+  justify-content: center; /* centraliza horizontalmente */
+  gap: 1.5rem;
+  padding: 1rem 0;
+  background-color: #8392a0; /* mesma cor do border do form */
+  border-radius: 12px;       /* combina com o form */
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1); /* mesma sombra do form */
+  font-family: Arial, sans-serif;
+  flex-wrap: wrap;
+}
+
+nav a {
+  text-decoration: none;
+  color: #ffffff; /* branco suave, contrasta com fundo azul */
+  font-weight: bold;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+nav a:hover {
+  background: linear-gradient(135deg, #2980b9, #3498db); /* combina com botão form */
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Separador estilizado */
+nav span.separator {
+  color: #bdc3c7;
+  font-weight: normal;
+}
+
+/* === Responsividade === */
+
+/* Tablets (até 1024px) */
+@media (max-width: 1024px) {
+  nav {
+    gap: 1rem;
+    padding: 0.8rem 0;
+  }
+
+  nav a {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.95rem;
+  }
+}
+
+/* Celulares (até 600px) */
+@media (max-width: 600px) {
+  nav {
+    display: flex;             /* garante flex */
+    flex-direction: column;    /* empilha os links */
+    align-items: center;       /* centraliza horizontalmente */
+    gap: 0.6rem;
+    padding: 0.6rem 0;
+    width: 100%;               /* ocupa a largura disponível */
+    box-sizing: border-box;
+  }
+
+  nav a {
+    width: 87%;                /* links com largura consistente */
+    text-align: center;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+  }
+
+  nav span.separator {
+    display: none;             /* remove separador no mobile */
+  }
+}

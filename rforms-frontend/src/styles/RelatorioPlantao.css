@@ -1,0 +1,323 @@
+/* ========================= */
+/* === Container Principal === */
+/* ========================= */
+.form-container {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 2rem;
+  border: 2px solid #2c3e50;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+h1, h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+}
+
+/* ==================== */
+/* === Formulário Base === */
+/* ==================== */
+.form-base {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.field-group {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.field-group label {
+  flex: 0 0 140px;
+  font-weight: bold;
+  color: #34495e;
+}
+
+/* Inputs de texto, data e hora */
+.field-group input[type="text"],
+.field-group input[type="date"],
+.field-group input[type="time"] {
+  flex: 1 1 auto;
+  min-width: 140px;  /* menor largura */
+  max-width: 220px;  /* largura máxima para manter compacto */
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fdfdfd;
+  font-size: 0.95rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.field-group input[type="text"]:focus,
+.field-group input[type="date"]:focus,
+.field-group input[type="time"]:focus {
+  border-color: #6c5ce7;
+  box-shadow: 0 0 6px rgba(108, 92, 231, 0.4);
+  outline: none;
+  background-color: #ffffff;
+}
+
+/* Remove estilo nativo de time */
+.field-group input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(50%);
+  cursor: pointer;
+}
+
+/* ==================== */
+/* === Grupos de Campos === */
+/* ==================== */
+.checkbox-group,
+.radio-group,
+.observacoes-group {
+  border: 1px solid #ccc;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.checkbox-group legend,
+.radio-group legend,
+.observacoes-group legend {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+/* ==================== */
+/* === Patrulhamento === */
+/* ==================== */
+.patrulhamento-item {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #fdfdfd;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 0.8rem;
+}
+
+.patrulhamento-item strong {
+  color: #34495e;
+}
+
+.patrulhamento-item input {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.patrulhamento-item input:focus {
+  border-color: #6c5ce7;
+  box-shadow: 0 0 6px rgba(108, 92, 231, 0.3);
+  outline: none;
+}
+
+.patrulhamento-texto {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  margin-top: 0.2rem;
+  font-style: italic;
+}
+
+/* ==================== */
+/* === Observações === */
+/* ==================== */
+.observacoes-group textarea {
+  resize: vertical;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-height: 80px;
+  transition: border-color 0.3s ease;
+}
+
+.observacoes-group textarea:focus {
+  border-color: #2980b9;
+  outline: none;
+  box-shadow: 0 0 4px rgba(41, 128, 185, 0.3);
+}
+
+/* ==================== */
+/* === Checkboxes Custom === */
+/* ==================== */
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  font-weight: normal;
+  font-size: 0.95rem;
+  color: #2c3e50;
+  transition: color 0.2s ease;
+}
+
+.checkbox-group input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #6c5ce7;
+  border-radius: 6px;
+  background-color: white;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.checkbox-group input[type="checkbox"]:checked {
+  background-color: #6c5ce7;
+  border-color: #6c5ce7;
+}
+
+.checkbox-group input[type="checkbox"]:checked::after {
+  content: "✔";
+  position: absolute;
+  top: 0;
+  left: 3px;
+  color: white;
+  font-size: 14px;
+}
+
+.checkbox-group label:hover {
+  color: #6c5ce7;
+}
+
+/* ==================== */
+/* === Botão e Upload === */
+/* ==================== */
+.form-button {
+  padding: 0.9rem;
+  background: linear-gradient(135deg, #2980b9, #3498db);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: background 0.3s ease, transform 0.1s ease;
+  margin: 0 auto;
+}
+
+.form-button:hover {
+  background: linear-gradient(135deg, #1c5980, #2573a6);
+  transform: translateY(-2px);
+}
+
+input[type="file"] {
+  display: none;
+}
+
+.upload-label {
+  display: inline-block;
+  padding: 1rem 2rem;
+  margin: 0.5rem 0;
+  background-color: #6c5ce7;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.3s ease, transform 0.1s ease;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+}
+
+.upload-label:hover {
+  background-color: #4834d4;
+  transform: scale(1.02);
+}
+
+.upload-label:active {
+  background-color: #372bc1;
+  transform: scale(0.98);
+}
+
+.upload-info {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  color: #2c3e50;
+  font-style: italic;
+}
+
+/* ==================== */
+/* === Responsividade === */
+/* ==================== */
+@media (max-width: 1024px) {
+  .form-container {
+    padding: 1.5rem;
+  }
+
+  .field-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .field-group label {
+    flex: none;
+    width: 100%;
+  }
+
+  .field-group input {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .patrulhamento-item input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+
+  h1, h2 {
+    font-size: 1.4rem;
+  }
+
+  .form-button,
+  .upload-label {
+    width: 87%;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+  }
+
+  .observacoes-group textarea {
+    min-height: 100px;
+    width: 85%;
+  }
+
+  .upload-info {
+    font-size: 0.75rem;
+  }
+
+  .checkbox-group label {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .patrulhamento-item input {
+    width: 100%;
+  }
+
+  .field-group input[type="date"],
+  .field-group input[type="time"] {
+    min-width: 100px;
+    max-width: 160px;
+    font-size: 0.9rem;
+  }
+}
