@@ -17,10 +17,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para gerar PDF
-
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
-    const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
+    const pdfDoc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
     const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -79,14 +78,19 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('OBSERVAÇÕES:');
     pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
 
-    // Numeração de páginas
-    pdfDoc.on('pageAdded', () => {
-      pdfDoc.text(`Página ${pdfDoc.page.number}`, 0, pdfDoc.page.height - 30, { align: 'center' });
+    // --- Numeração de páginas ---
+    pdfDoc.end(); // primeiro finaliza o PDF para que o bufferPages funcione
+    pdfDoc.on('end', () => {
+      const range = pdfDoc.bufferedPageRange(); // { start: 0, count: X }
+      for (let i = 0; i < range.count; i++) {
+        pdfDoc.switchToPage(i);
+        pdfDoc.fontSize(10)
+              .text(`Página ${i + 1} de ${range.count}`, 0, pdfDoc.page.height - 30, { align: 'center' });
+      }
     });
-
-    pdfDoc.end();
   });
 }
+
 
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
