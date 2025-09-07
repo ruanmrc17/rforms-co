@@ -105,7 +105,7 @@ export default function RelatorioPlantao() {
     });
 
     try {
-      const res = await fetch('/api/submit', { 
+      const res = await fetch('https://seu-projeto.vercel.app/api/submit', { 
         method: 'POST',
         body: formDataToSend,
       });
