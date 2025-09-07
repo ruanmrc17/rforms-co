@@ -96,8 +96,8 @@ app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), asyn
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'enviorforms@gmail.com', // seu e-mail
-        pass: 'SUA_SENHA_DE_APP'      // senha de app
+        user: 'enviorforms@gmail.com', 
+        pass: 'lgni quba jihs zgox'    // senha de app
       }
     });
 
