@@ -17,13 +17,25 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para gerar PDF
-
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+
+    // Função para adicionar numeração de página
+    const addFooter = () => {
+      pdfDoc.text(
+        `Página ${pdfDoc.page.number}`, 
+        0, 
+        pdfDoc.page.height - 30, 
+        { align: 'center' }
+      );
+    };
+
+    // Adiciona footer na primeira página
+    addFooter();
 
     // Logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
@@ -79,14 +91,13 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('OBSERVAÇÕES:');
     pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
 
-    // Numeração de páginas
-    pdfDoc.on('pageAdded', () => {
-      pdfDoc.text(`Página ${pdfDoc.page.number}`, 0, pdfDoc.page.height - 30, { align: 'center' });
-    });
+    // Atualiza footer a cada página nova
+    pdfDoc.on('pageAdded', addFooter);
 
     pdfDoc.end();
   });
 }
+
 
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
