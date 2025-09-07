@@ -5,6 +5,7 @@ const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
+const path = require('path'); // para resolver caminho de forma segura
 
 const app = express();
 const MAX_EMAIL_SIZE = 25 * 1024 * 1024; // 25MB
@@ -16,16 +17,25 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Função para gerar PDF
+
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes }) {
   return new Promise((resolve) => {
-    const pdfDoc = new PDFDocument();
+    const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
+    // Caminho da imagem do logo (ajuste conforme sua estrutura)
+    const logoPath = path.join(__dirname, '/seglogoata.jpg');
+
+    // Adiciona o logo no canto superior direito
+    pdfDoc.image(logoPath, 450, 15, { width: 100 }); // x=450, y=15, width=100px
+
+    // Título centralizado
     pdfDoc.fontSize(18).text('RELATÓRIO DE PLANTÃO', { align: 'center' });
     pdfDoc.moveDown();
+
+    // Informações principais
     pdfDoc.fontSize(12).text(`NOME: ${nome?.toUpperCase() || '-'}`);
     pdfDoc.text(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
     pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA: ${horaInicio || '-'}`);
@@ -34,14 +44,10 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
 
     // OBJETOS
     pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
-
-    // Cones
     if (objetos.cones?.marcado) {
       const qtd = parseInt(objetos.cones.quantidade) || 0;
       pdfDoc.text(`- ${qtd} CONE(S)`);
     }
-
-    // Outros objetos
     Object.keys(objetos).forEach(item => {
       if (item !== 'cones' && objetos[item]) {
         pdfDoc.text(`- ${item.toUpperCase()}`);
