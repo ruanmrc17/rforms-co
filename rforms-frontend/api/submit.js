@@ -17,106 +17,71 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Função para gerar PDF
-const fs = require('fs'); // opcional se quiser salvar
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
-const fetch = require('node-fetch'); // para carregar imagens do filesystem ou URL
+const PdfPrinter = require('pdfmake');
+const fs = require('fs');
+const path = require('path');
+
+const fonts = {
+  Roboto: {
+    normal: path.join(__dirname, 'fonts/Roboto-Regular.ttf'),
+    bold: path.join(__dirname, 'fonts/Roboto-Bold.ttf'),
+    italics: path.join(__dirname, 'fonts/Roboto-Italic.ttf'),
+    bolditalics: path.join(__dirname, 'fonts/Roboto-BoldItalic.ttf')
+  }
+};
+
+const printer = new PdfPrinter(fonts);
 
 async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
-  // Cria um novo PDF
-  const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const docDefinition = {
+    pageSize: 'A4',
+    pageMargins: [50, 70, 50, 50],
+    header: {
+      margin: [50, 20, 50, 0],
+      columns: [
+        { text: 'RELATÓRIO DIÁRIO DE PLANTÃO', alignment: 'center', fontSize: 16, bold: true },
+      ]
+    },
+    footer: (currentPage, pageCount) => {
+      return {
+        text: `Página ${currentPage} de ${pageCount}`,
+        alignment: 'center',
+        fontSize: 10,
+        margin: [0, 0, 0, 10]
+      };
+    },
+    content: [
+      { text: 'INSPETORES GCM ATALAIA - AL', alignment: 'center', fontSize: 10 },
+      { text: 'SECRETARIA DE DEFESA SOCIAL', alignment: 'center', fontSize: 10 },
+      { text: 'GUARDA CIVIL MUNICIPAL DE ATALAIA - AL', alignment: 'center', fontSize: 10 },
+      { text: '\n' },
+      { text: `NOME: ${nome?.toUpperCase() || '-'}` },
+      { text: `MATRÍCULA: ${matricula?.toUpperCase() || '-'}` },
+      { text: `DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}` },
+      { text: `DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}` },
+      { text: '\nOBJETOS ENCONTRADOS NA BASE:', bold: true },
+      ...Object.keys(objetos).map(item => {
+        if (item === 'cones' && objetos.cones?.marcado) return `- ${objetos.cones.quantidade || 0} CONE(S)`;
+        if (item === 'NENHUMA DAS OPÇÕES' && objetos[item]?.marcado && objetos[item].outros) return `- ${objetos[item].outros.toUpperCase()}`;
+        if (objetos[item]) return `- ${item.toUpperCase()}`;
+      }).filter(Boolean),
+      { text: '\nPATRULHAMENTO PREVENTIVO:', bold: true },
+      ...Object.keys(patrulhamento).map(item => `- ${item.toUpperCase()}: ${patrulhamento[item]?.primeiro || ''}`),
+      { text: '\nOCORRÊNCIAS:', bold: true },
+      ...Object.keys(ocorrencias).map(item => `- ${item.toUpperCase()}: ${ocorrencias[item]?.detalhes || ''}`),
+      { text: '\nOBSERVAÇÕES:', bold: true },
+      { text: observacoes || '-' }
+    ]
+  };
 
-  // Função para adicionar uma página com conteúdo
-  function addPage(contentLines = []) {
-    const page = pdfDoc.addPage([595, 842]); // A4
-    const { width, height } = page.getSize();
-    let y = height - 50;
-
-    // Logo (precisa converter em Uint8Array)
-    try {
-      const logoPath = path.join(__dirname, 'seglogoata.jpg');
-      const logoBytes = fs.readFileSync(logoPath);
-      const image = pdfDoc.embedJpg(logoBytes);
-      const imageDims = image.scale(0.2); // ajusta tamanho
-      page.drawImage(image, { x: width - imageDims.width - 50, y: height - imageDims.height - 30, width: imageDims.width, height: imageDims.height });
-    } catch (err) {
-      console.log('Logo não encontrada ou erro:', err.message);
-    }
-
-    // Adiciona cada linha de conteúdo
-    const lineHeight = 14;
-    contentLines.forEach(line => {
-      if (y < 50) {
-        // Nova página
-        y = height - 50;
-        addPage(contentLines.slice(contentLines.indexOf(line)));
-        return;
-      }
-      page.drawText(line, { x: 50, y, size: 12, font });
-      y -= lineHeight;
-    });
-
-    return page;
-  }
-
-  // Prepara conteúdo em linhas
-  const lines = [];
-  lines.push('RELATÓRIO DIÁRIO DE PLANTÃO');
-  lines.push('INSPETORES GCM ATALAIA - AL');
-  lines.push('SECRETARIA DE DEFESA SOCIAL');
-  lines.push('GUARDA CIVIL MUNICIPAL DE ATALAIA - AL');
-  lines.push('');
-  lines.push(`NOME: ${nome?.toUpperCase() || '-'}`);
-  lines.push(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
-  lines.push(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
-  lines.push(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
-  lines.push('');
-  lines.push('OBJETOS ENCONTRADOS NA BASE:');
-
-  if (objetos.cones?.marcado) {
-    const qtd = parseInt(objetos.cones.quantidade) || 0;
-    lines.push(`- ${qtd} CONE(S)`);
-  }
-  Object.keys(objetos).forEach(item => {
-    if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
-      lines.push(`- ${item.toUpperCase()}`);
-    }
+  const pdfDoc = printer.createPdfKitDocument(docDefinition);
+  const chunks = [];
+  return new Promise((resolve, reject) => {
+    pdfDoc.on('data', chunk => chunks.push(chunk));
+    pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+    pdfDoc.on('error', reject);
+    pdfDoc.end();
   });
-  if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
-    lines.push(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
-  }
-
-  lines.push('');
-  lines.push('PATRULHAMENTO PREVENTIVO:');
-  Object.keys(patrulhamento).forEach(item => {
-    const detalhes = patrulhamento[item]?.primeiro || '';
-    lines.push(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
-  });
-
-  lines.push('');
-  lines.push('OCORRÊNCIAS:');
-  Object.keys(ocorrencias).forEach(item => {
-    const detalhes = ocorrencias[item]?.detalhes || '';
-    lines.push(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
-  });
-
-  lines.push('');
-  lines.push('OBSERVAÇÕES:');
-  lines.push(observacoes?.toUpperCase() || '-');
-
-  // Adiciona página com todas as linhas
-  const page = await addPage(lines);
-
-  // Numeração de páginas
-  const pages = pdfDoc.getPages();
-  pages.forEach((p, idx) => {
-    const { width } = p.getSize();
-    p.drawText(`Página ${idx + 1} de ${pages.length}`, { x: 0, y: 20, size: 10, font, color: rgb(0,0,0), width, align: 'center' });
-  });
-
-  // Retorna buffer em memória
-  const pdfBytes = await pdfDoc.save();
-  return Buffer.from(pdfBytes);
 }
 
 // Função para gerar ZIP
