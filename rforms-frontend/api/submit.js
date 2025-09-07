@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Função para gerar PDF
+
 function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -24,18 +24,21 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // Função para adicionar numeração de página
+    // Função para adicionar rodapé na página atual
     const addFooter = () => {
-      pdfDoc.text(
-        `Página ${pdfDoc.page.number}`, 
-        0, 
-        pdfDoc.page.height - 30, 
+      const bottom = pdfDoc.page.height - 30; // posição do rodapé
+      pdfDoc.fontSize(10).text(
+        `Página ${pdfDoc.page.number}`,
+        0,
+        bottom,
         { align: 'center' }
       );
     };
 
-    // Adiciona footer na primeira página
-    addFooter();
+    // Evento para páginas novas
+    pdfDoc.on('pageAdded', () => addFooter());
+
+    // --- Conteúdo do PDF ---
 
     // Logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
@@ -91,12 +94,14 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text('OBSERVAÇÕES:');
     pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
 
-    // Atualiza footer a cada página nova
-    pdfDoc.on('pageAdded', addFooter);
+    // Adiciona rodapé na última página
+    addFooter();
 
     pdfDoc.end();
   });
 }
+
+module.exports = generatePDF;
 
 
 // Função para gerar ZIP
