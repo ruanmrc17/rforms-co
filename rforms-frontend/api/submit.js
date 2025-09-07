@@ -25,6 +25,15 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
+    // Função para numerar página
+    function addPageNumber() {
+      const bottom = pdfDoc.page.height - 30;
+      const pageNumber = pdfDoc.page.number;
+      pdfDoc.fontSize(8).fillColor('gray');
+      pdfDoc.text(`Página ${pageNumber}`, 0, bottom, { align: 'right' });
+      pdfDoc.fillColor('black'); // reset cor
+    }
+
     // Logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     pdfDoc.image(logoPath, 450, 15, { width: 100 });
@@ -80,9 +89,8 @@ function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaS
     pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
 
     // Numeração de páginas
-    pdfDoc.on('pageAdded', () => {
-      pdfDoc.text(`Página ${pdfDoc.page.number}`, 0, pdfDoc.page.height - 30, { align: 'center' });
-    });
+    addPageNumber(); // primeira página
+    pdfDoc.on('pageAdded', addPageNumber); // novas páginas
 
     pdfDoc.end();
   });
