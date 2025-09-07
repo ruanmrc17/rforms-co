@@ -80,7 +80,7 @@ function generateZIP(pdfBuffer, arquivos) {
 }
 
 // Rota POST /api/submit
-app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
+app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
     const { nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, observacoes } = req.body;
     const objetos = JSON.parse(req.body.objetos || '{}');
