@@ -16,38 +16,18 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-function generatePDF(data) {
+// Função para gerar PDF
+
+function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
-    let pageNumber = 1;
-
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    function addPage() {
-      if (pageNumber > 1) pdfDoc.addPage();
-      pdfDoc.fontSize(10).text(`Página ${pageNumber}`, pdfDoc.page.width - 70, pdfDoc.page.height - 30);
-      pageNumber++;
-    }
-
-    function addTextBlock(text) {
-      if (!text) return;
-      const lines = text.split('\n');
-      lines.forEach(line => {
-        if (pdfDoc.y > pdfDoc.page.height - 80) addPage();
-        pdfDoc.text(line, { width: 500 });
-      });
-    }
-
-    // Primeira página
-    addPage();
-
-    // Logo (opcional)
-    try {
-      const logoPath = path.join(__dirname, 'seglogoata.jpg');
-      pdfDoc.image(logoPath, 450, 15, { width: 100 });
-    } catch {}
+    // Logo
+    const logoPath = path.join(__dirname, 'seglogoata.jpg');
+    pdfDoc.image(logoPath, 450, 15, { width: 100 });
 
     // Títulos
     pdfDoc.fontSize(18).text('RELATÓRIO DIÁRIO DE PLANTÃO', { align: 'center' });
@@ -57,51 +37,58 @@ function generatePDF(data) {
     pdfDoc.moveDown();
 
     // Informações principais
-    pdfDoc.fontSize(12).text(`NOME: ${data.nome || '-'}`);
-    pdfDoc.text(`MATRÍCULA: ${data.matricula || '-'}`);
-    pdfDoc.text(`DATA INÍCIO: ${data.dataInicio || '-'} - HORA INÍCIO: ${data.horaInicio || '-'}`);
-    pdfDoc.text(`DATA SAÍDA: ${data.dataSaida || '-'} - HORA SAÍDA: ${data.horaSaida || '-'}`);
+    pdfDoc.fontSize(12).text(`NOME: ${nome?.toUpperCase() || '-'}`);
+    pdfDoc.text(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
+    pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
+    pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
     pdfDoc.moveDown();
 
     // Objetos
     pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
-    if (data.objetos?.cones?.marcado) {
-      const qtd = parseInt(data.objetos.cones.quantidade) || 0;
+    if (objetos.cones?.marcado) {
+      const qtd = parseInt(objetos.cones.quantidade) || 0;
       pdfDoc.text(`- ${qtd} CONE(S)`);
     }
-    Object.keys(data.objetos || {}).forEach(item => {
-      if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && data.objetos[item]) {
-        pdfDoc.text(`- ${item}`);
+    Object.keys(objetos).forEach(item => {
+      if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
+        pdfDoc.text(`- ${item.toUpperCase()}`);
       }
     });
-    if (data.objetos?.['NENHUMA DAS OPÇÕES']?.marcado && data.objetos['NENHUMA DAS OPÇÕES'].outros) {
-      pdfDoc.text(`- ${data.objetos['NENHUMA DAS OPÇÕES'].outros}`);
+    if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
+      pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
     }
 
     // Patrulhamento
     pdfDoc.moveDown();
     pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
-    Object.keys(data.patrulhamento || {}).forEach(item => {
-      addTextBlock(`- ${item}: ${data.patrulhamento[item]?.primeiro || ''}`);
+    Object.keys(patrulhamento).forEach(item => {
+      const detalhes = patrulhamento[item]?.primeiro || '';
+      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
     });
 
     // Ocorrências
     pdfDoc.moveDown();
     pdfDoc.text('OCORRÊNCIAS:');
-    Object.keys(data.ocorrencias || {}).forEach(item => {
-      addTextBlock(`- ${item}: ${data.ocorrencias[item]?.detalhes || ''}`);
+    Object.keys(ocorrencias).forEach(item => {
+      const detalhes = ocorrencias[item]?.detalhes || '';
+      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`, { width: 450, lineGap: 2 });
     });
 
     // Observações
     pdfDoc.moveDown();
     pdfDoc.text('OBSERVAÇÕES:');
-    addTextBlock(data.observacoes || '-');
+    pdfDoc.text(observacoes?.toUpperCase() || '-', { width: 450, lineGap: 2 });
+
+    // Numeração de páginas
+    pdfDoc.on('pageAdded', () => {
+      pdfDoc.text(`Página ${pdfDoc.page.number}`, 0, pdfDoc.page.height - 30, { align: 'center' });
+    });
 
     pdfDoc.end();
   });
 }
 
-// ZIP generator (igual antes)
+// Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
   return new Promise((resolve, reject) => {
     const zipChunks = [];
@@ -119,17 +106,38 @@ function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
     archive.finalize();
   });
 }
-
-// Endpoint
 app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
-    const { nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, observacoes } = req.body;
+    const {
+      nome = '',
+      matricula = '',
+      dataInicio = '',
+      horaInicio = '',
+      dataSaida = '',
+      horaSaida = '',
+      observacoes = ''
+    } = req.body;
 
+    // Objetos
     let objetos = req.body.objetos ? (typeof req.body.objetos === 'string' ? JSON.parse(req.body.objetos) : req.body.objetos) : {};
+
+    // Patrulhamento
     let patrulhamento = req.body.patrulhamento ? (typeof req.body.patrulhamento === 'string' ? JSON.parse(req.body.patrulhamento) : req.body.patrulhamento) : {};
+
+    // Ocorrências
     let ocorrencias = req.body.ocorrencias ? (typeof req.body.ocorrencias === 'string' ? JSON.parse(req.body.ocorrencias) : req.body.ocorrencias) : {};
 
     if (objetos.cones?.quantidade) objetos.cones.quantidade = parseInt(objetos.cones.quantidade) || 0;
+
+    // Debug no console
+    console.log('OBJETOS RECEBIDOS:', objetos);
+    console.log('PATRULHAMENTO RECEBIDO:', patrulhamento);
+    console.log('OCORRÊNCIAS RECEBIDAS:', ocorrencias);
+
+    // Extrair nomes das ocorrências selecionadas
+    const nomesOcorrencias = Object.keys(ocorrencias).filter(item => ocorrencias[item]?.primeiro || ocorrencias[item]);
+    console.log('Nomes das ocorrências selecionadas:', nomesOcorrencias);
+console.log("OCORRÊNCIAS NO BACKEND:", ocorrencias);
 
     const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes });
 
@@ -139,11 +147,16 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
 
     const zipBuffer = await generateZIP(pdfBuffer, req.files, arquivoNome);
 
-    if (zipBuffer.length > MAX_EMAIL_SIZE) return res.status(400).json({ error: 'Arquivo muito grande para envio por e-mail. Apenas PDF será enviado.' });
+    if (zipBuffer.length > MAX_EMAIL_SIZE) {
+      return res.status(400).json({ error: 'Arquivo muito grande para envio por e-mail. Apenas PDF será enviado.' });
+    }
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: { user: 'enviorforms@gmail.com', pass: 'lgni quba jihs zgox' }
+      auth: {
+        user: 'enviorforms@gmail.com',
+        pass: 'lgni quba jihs zgox'
+      }
     });
 
     await transporter.sendMail({
@@ -155,6 +168,7 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
     });
 
     return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
+
   } catch (err) {
     console.error('Erro no backend:', err);
     return res.status(500).json({ error: 'Erro ao gerar ou enviar o relatório' });
