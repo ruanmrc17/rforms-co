@@ -78,42 +78,10 @@ function generateZIP(pdfBuffer, arquivos) {
 }
 
 // Rota POST /submit
-app.post('/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
-  try {
-    const { nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, observacoes } = req.body;
-    const objetos = JSON.parse(req.body.objetos || '{}');
-    const patrulhamento = JSON.parse(req.body.patrulhamento || '{}');
-
-    const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, observacoes });
-    const zipBuffer = await generateZIP(pdfBuffer, req.files);
-
-    // Verificar tamanho antes de enviar
-    if (zipBuffer.length > MAX_EMAIL_SIZE) {
-      return res.status(400).json({ error: 'Arquivo muito grande para envio por e-mail. Apenas PDF será enviado.' });
-    }
-
-    // Configuração do Nodemailer
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: 'enviorforms@gmail.com', // seu e-mail
-        pass: 'SUA_SENHA_DE_APP'      // senha de app
-      }
-    });
-
-    await transporter.sendMail({
-      from: '"RELATÓRIO AUTOMÁTICO" <enviorforms@gmail.com>',
-      to: 'ruanmarcos1771@gmail.com', // seu e-mail de destino
-      subject: `RELATÓRIO: ${nome?.toUpperCase() || 'RELATORIO'}`,
-      text: 'Segue em anexo o relatório em ZIP.',
-      attachments: [{ filename: 'RELATORIO.zip', content: zipBuffer }]
-    });
-
-    return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
-  } catch (err) {
-    console.error('Erro no backend:', err);
-    return res.status(500).json({ error: 'Erro ao gerar ou enviar o relatório' });
-  }
+app.post('/submit', (req, res) => {
+  console.log('Recebido:', req.body);
+  console.log('Arquivos:', req.files);
+  res.status(200).json({ message: 'Funcionando!' });
 });
 
 // Export serverless handler para Vercel
