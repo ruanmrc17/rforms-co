@@ -15,91 +15,106 @@ const upload = multer({ storage });
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const fs = require('fs');
+const path = require('path');
+const PDFDocument = require('pdfkit');
 
-// Função para gerar PDF
-function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
+// Função para formatar data em extenso
+function formatDateExtenso(dataStr) {
+  const meses = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ];
+  const [ano, mes, dia] = dataStr.split('-'); // esperado "YYYY-MM-DD"
+  return `${dia} de ${meses[parseInt(mes) - 1]} de ${ano}`;
+}
+
+// Função para gerar o PDF
+async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
-    pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+    pdfDoc.on('end', () => {
+      const buffer = Buffer.concat(chunks);
 
-    // Função para adicionar número de página
-    function addPageNumber(doc) {
-      const range = doc.bufferedPageRange(); // { start: 0, count: X }
-      for (let i = 0; i < range.count; i++) {
-        doc.switchToPage(i);
-        doc.fontSize(10)
-          .text(`${i + 1}`, doc.page.width - 50, doc.page.height - 30, {
-            align: 'right'
-          });
-      }
-    }
-
-    // Evento para quando uma nova página for criada
-    pdfDoc.on('pageAdded', () => {
-      // Podemos atualizar rodapé aqui se necessário
+      // Nome automático do arquivo
+      const fileName = `${formatDateExtenso(dataInicio)} - ${nome}.pdf`;
+      fs.writeFileSync(fileName, buffer);
+      resolve(buffer);
     });
 
-    // Logo
-    const logoPath = path.join(__dirname, 'seglogoata.jpg');
-    pdfDoc.image(logoPath, 450, 15, { width: 100 });
-
-    // Títulos
-    pdfDoc.fontSize(18).text('RELATÓRIO DIÁRIO DE PLANTÃO', { align: 'center' });
-    pdfDoc.fontSize(10).text('INSPETORES GCM ATALAIA - AL', { align: 'center' });
-    pdfDoc.fontSize(10).text('SECRETARIA DE DEFESA SOCIAL', { align: 'center' });
-    pdfDoc.fontSize(10).text('GUARDA CIVIL MUNICIPAL DE ATALAIA - AL', { align: 'center' });
+    // Cabeçalho
+    pdfDoc.fontSize(14).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO Report', {
+      align: 'center'
+    });
     pdfDoc.moveDown();
 
-    // Informações principais
-    pdfDoc.fontSize(12).text(`NOME: ${nome?.toUpperCase() || '-'}`);
-    pdfDoc.text(`MATRÍCULA: ${matricula?.toUpperCase() || '-'}`);
-    pdfDoc.text(`DATA INÍCIO: ${dataInicio || '-'} - HORA INÍCIO: ${horaInicio || '-'}`);
-    pdfDoc.text(`DATA SAÍDA: ${dataSaida || '-'} - HORA SAÍDA: ${horaSaida || '-'}`);
-    pdfDoc.moveDown();
+    // Criar "quadrado" com informações
+    const startX = 50;
+    const startY = 100;
+    const boxWidth = 500;
+    let cursorY = startY;
+
+    // Desenhar quadrado (vai até quase o final da página)
+    pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
+
+    // Função auxiliar para escrever linha dentro do quadrado
+    function writeLine(label, value) {
+      pdfDoc.fontSize(11)
+        .text(`${label}: ${value}`, startX + 10, cursorY + 10, { width: boxWidth - 20 });
+      cursorY += 25;
+    }
+
+    // Campos principais
+    writeLine('NOME', nome?.toUpperCase() || '-');
+    writeLine('MATRÍCULA', matricula?.toUpperCase() || '-');
+    writeLine('DATA INICIO', `${dataInicio || '-'}  HORA INÍCIO: ${horaInicio || '-'}`);
+    writeLine('DATA SAÍDA', `${dataSaida || '-'}  HORA SAÍDA: ${horaSaida || '-'}`);
 
     // Objetos
-    pdfDoc.text('OBJETOS ENCONTRADOS NA BASE:');
-    if (objetos.cones?.marcado) {
-      const qtd = parseInt(objetos.cones.quantidade) || 0;
-      pdfDoc.text(`- ${qtd} CONE(S)`);
+    let objetosStr = '';
+    if (objetos?.cones?.marcado) {
+      objetosStr += `${objetos.cones.quantidade || 0} CONE(S) `;
     }
-
-    Object.keys(objetos).forEach(item => {
-      if (item !== 'cones' && item !== 'NENHUMA DAS OPÇÕES' && objetos[item]) {
-        pdfDoc.text(`- ${item.toUpperCase()}`);
+    Object.keys(objetos || {}).forEach(item => {
+      if (item !== 'cones' && objetos[item]) {
+        objetosStr += `${item.toUpperCase()} `;
       }
     });
-
-    if (objetos['NENHUMA DAS OPÇÕES']?.marcado && objetos['NENHUMA DAS OPÇÕES'].outros) {
-      pdfDoc.text(`- ${objetos['NENHUMA DAS OPÇÕES'].outros.toUpperCase()}`);
+    if (objetos['NENHUMA DAS OPÇÕES']?.marcado) {
+      objetosStr += objetos['NENHUMA DAS OPÇÕES'].outros?.toUpperCase() || 'NENHUMA DAS OPÇÕES';
     }
+    writeLine('OBJETOS ENCONTRADOS NA BASE', objetosStr || 'NENHUMA DAS OPÇÕES');
 
-    // Patrulhamento
-    pdfDoc.moveDown();
-    pdfDoc.text('PATRULHAMENTO PREVENTIVO:');
-    Object.keys(patrulhamento).forEach(item => {
+    // Patrulhamentos
+    Object.keys(patrulhamento || {}).forEach(item => {
       const detalhes = patrulhamento[item]?.primeiro || '';
-      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+      writeLine('PATRULHAMENTO PREVENTIVO', `${item.toUpperCase()} ${detalhes.toUpperCase()}`);
     });
 
     // Ocorrências
-    pdfDoc.moveDown();
-    pdfDoc.text('OCORRÊNCIAS:');
-    Object.keys(ocorrencias).forEach(item => {
+    Object.keys(ocorrencias || {}).forEach(item => {
       const detalhes = ocorrencias[item]?.detalhes || '';
-      pdfDoc.text(`- ${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+      writeLine('OCORRÊNCIA', `${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
     });
 
     // Observações
-    pdfDoc.moveDown();
-    pdfDoc.text('OBSERVAÇÕES:');
-    pdfDoc.text(observacoes?.toUpperCase() || '-');
+    writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
 
-    // Adiciona números de página antes de finalizar
-    addPageNumber(pdfDoc);
+    // Espaço extra
+    cursorY += 20;
+    writeLine('IMPORTAR FOTOS', '');
 
+    // Rodapé com data/hora
+    cursorY += 40;
+    writeLine('Added Time', `${dataInicio} ${horaInicio}`);
+    writeLine('Task Owner', 'gcmatalaiaal@gmail.com');
+
+    pdfDoc.moveDown(2);
+    pdfDoc.fontSize(9).text('Powered by Zoho Forms (simulação)', { align: 'center' });
+
+    // Finalizar
     pdfDoc.end();
   });
 }
