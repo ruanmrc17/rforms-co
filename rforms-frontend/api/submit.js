@@ -37,21 +37,21 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // === Inserir Logo (topo esquerdo) ===
+    // === Inserir Logo (topo direito) ===
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     if (fs.existsSync(logoPath)) {
-      pdfDoc.image(logoPath, 50, 30, { width: 80 }); // logo menor no canto esquerdo
+      pdfDoc.image(logoPath, 450, 30, { width: 80 }); // canto direito superior
     }
 
-    // Cabeçalho (mais abaixo do logo)
-    pdfDoc.fontSize(14).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO Report', 0, 80, {
+    // Cabeçalho (menor e abaixo da logo)
+    pdfDoc.fontSize(12).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO Report', 0, 90, {
       align: 'center'
     });
     pdfDoc.moveDown(2);
 
-    // Criar "quadrado" com informações (mais abaixo ainda)
+    // Criar "quadrado" com informações
     const startX = 50;
-    const startY = 150; // 🔽 abaixado para não bater no título/logo
+    const startY = 150; // abaixado para não bater na logo/título
     const boxWidth = 500;
     let cursorY = startY;
 
@@ -112,7 +112,6 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.end();
   });
 }
-
 
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
