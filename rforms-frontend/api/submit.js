@@ -5,6 +5,7 @@ const archiver = require('archiver');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
 const fs = require('fs');
+const path = require('path');
 const { PassThrough } = require('stream');
 
 const app = express();
@@ -36,6 +37,12 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
+    // === Inserir Logo ===
+    const logoPath = path.join(__dirname, 'atalaialogo.jpg');
+    if (fs.existsSync(logoPath)) {
+      pdfDoc.image(logoPath, 450, 20, { width: 100 });
+    }
+
     // Cabeçalho
     pdfDoc.fontSize(14).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO Report', {
       align: 'center'
@@ -44,7 +51,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
 
     // Criar "quadrado" com informações
     const startX = 50;
-    const startY = 100;
+    const startY = 120;
     const boxWidth = 500;
     let cursorY = startY;
 
@@ -147,15 +154,9 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
 
     if (objetos.cones?.quantidade) objetos.cones.quantidade = parseInt(objetos.cones.quantidade) || 0;
 
-    console.log("OBJETOS:", objetos);
-    console.log("PATRULHAMENTO:", patrulhamento);
-    console.log("OCORRÊNCIAS:", ocorrencias);
-
     const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes });
 
-    // Nome do arquivo baseado no PDF modelo
     const nomeArquivoPDF = `${formatDateExtenso(dataInicio)} - ${nome}`;
-
     const zipBuffer = await generateZIP(pdfBuffer, req.files, nomeArquivoPDF);
 
     if (zipBuffer.length > MAX_EMAIL_SIZE) {

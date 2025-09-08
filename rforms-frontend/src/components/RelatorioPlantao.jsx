@@ -178,11 +178,12 @@ else {
 
   return (
     <div className="form-container">
-      <h1>INSPETORES GCM ATALAIA - AL</h1>
-      <h2>RELATÓRIO DIÁRIO DE PLANTÃO</h2>
-      <h2>SECRETARIA DE DEFESA SOCIAL</h2>
-      <h2>GUARDA CIVIL MUNICIPAL DE ATALAIA - AL</h2>
       <img src="/seglogoata.jpg" alt="Logo" className="site-logo" />
+      
+      <h2>SECRETARIA DE DEFESA SOCIAL</h2>
+      <h3>GUARDA CIVIL MUNICIPAL DE ATALAIA - AL</h3>
+      <h3>INSPETORES GCM ATALAIA - AL</h3>
+      <h3>RELATÓRIO DIÁRIO DE PLANTÃO</h3>
 
       <form onSubmit={handleSubmit} className="form-base">
         <div className="field-group">
