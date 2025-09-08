@@ -83,7 +83,6 @@ function writeSectionLine(label, value) {
   pdfDoc.moveTo(startX + 10, cursorY + 28) // começa à esquerda
     .lineTo(startX + boxWidth - 10, cursorY + 28) // vai até a direita
     .strokeColor('#999') // cinza claro
-    .lineWidth(0.5)
     .stroke();
 
   cursorY += 35; // aumenta espaçamento para dar respiro
