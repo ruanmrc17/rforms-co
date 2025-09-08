@@ -30,6 +30,7 @@ function formatDateExtenso(dataStr) {
 }
 
 // Função para gerar o PDF
+// Função para gerar o PDF
 async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -37,11 +38,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => {
       const buffer = Buffer.concat(chunks);
-
-      // Nome automático do arquivo
-      const fileName = `${formatDateExtenso(dataInicio)} - ${nome}.pdf`;
-      fs.writeFileSync(fileName, buffer);
-      resolve(buffer);
+      resolve(buffer); // ✅ retorna só o buffer, não grava no disco
     });
 
     // Cabeçalho
@@ -56,10 +53,10 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     const boxWidth = 500;
     let cursorY = startY;
 
-    // Desenhar quadrado (vai até quase o final da página)
+    // Desenhar quadrado
     pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
-    // Função auxiliar para escrever linha dentro do quadrado
+    // Função auxiliar para escrever linha
     function writeLine(label, value) {
       pdfDoc.fontSize(11)
         .text(`${label}: ${value}`, startX + 10, cursorY + 10, { width: boxWidth - 20 });
@@ -118,6 +115,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.end();
   });
 }
+
 
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
