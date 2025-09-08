@@ -306,7 +306,7 @@ else {
             value={data.observacoes}
             onChange={handleChange}
   rows={5} // maior altura inicial
-  style={{ width: '90%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+  style={{ width: '80%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
           />
         </fieldset>
 
