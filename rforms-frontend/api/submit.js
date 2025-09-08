@@ -29,7 +29,6 @@ function formatDateExtenso(dataStr) {
   return `${dia} de ${meses[parseInt(mes, 10) - 1]} de ${ano}`;
 }
 
-// Função para gerar o PDF
 async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -37,57 +36,47 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.on('data', chunk => chunks.push(chunk));
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
-    // === Inserir Logo (topo direito) ===
+    // Inserir logo
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     if (fs.existsSync(logoPath)) {
-      pdfDoc.image(logoPath, 480, 30, { width: 80 }); // canto direito superior
+      pdfDoc.image(logoPath, 480, 30, { width: 80 });
     }
 
-    // Cabeçalho (menor e abaixo da logo)
-    pdfDoc.fontSize(12).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO', 0, 90, {
-      align: 'center'
-    });
+    // Cabeçalho
+    pdfDoc.fontSize(12).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO', 0, 90, { align: 'center' });
     pdfDoc.moveDown(2);
 
-    // Criar "quadrado" com informações
     const startX = 50;
-    const startY = 150; // abaixado para não bater na logo/título
+    const startY = 150;
     const boxWidth = 500;
     let cursorY = startY;
 
     pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
     function writeLine(label, value) {
-  pdfDoc.font('Helvetica-Bold') // label em negrito
-    .fontSize(11)
-    .text(`${label}: `, startX + 10, cursorY + 10, {
-      continued: true // continua na mesma linha
-    });
+      pdfDoc.font('Helvetica-Bold')
+        .fontSize(11)
+        .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
 
-  pdfDoc.font('Helvetica') // valor normal
-    .fontSize(11)
-    .text(value || '-');
+      pdfDoc.font('Helvetica')
+        .fontSize(11)
+        .text(value || '-');
 
-  cursorY += 25;
-}
-function writeSectionLine(label, value) {
-  pdfDoc.font('Helvetica-Bold')
-    .fontSize(11)
-    .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
+      cursorY += 25;
+    }
 
-  pdfDoc.font('Helvetica')
-    .fontSize(11)
-    .text(value || '-');
+    function writeSectionLine(label, value) {
+      pdfDoc.font('Helvetica-Bold')
+        .fontSize(11)
+        .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
 
-  // Desenhar linha separadora logo abaixo
-  pdfDoc.moveTo(startX + 10, cursorY + 28) // começa à esquerda
-    .lineTo(startX + boxWidth - 10, cursorY + 28) // vai até a direita
-    .strokeColor('#999') // cinza claro
-    .stroke();
+      pdfDoc.font('Helvetica')
+        .fontSize(11)
+        .text(value || '-');
 
-  cursorY += 35; // aumenta espaçamento para dar respiro
-}
-
+      // Linha removida
+      cursorY += 35;
+    }
 
     // Campos principais
     writeLine('NOME', nome?.toUpperCase() || '-');
@@ -95,47 +84,52 @@ function writeSectionLine(label, value) {
     writeLine('DATA INICIO', `${dataInicio || '-'}  HORA INÍCIO: ${horaInicio || '-'}`);
     writeLine('DATA SAÍDA', `${dataSaida || '-'}  HORA SAÍDA: ${horaSaida || '-'}`);
 
-    // Objetos
-    let objetosStr = '';
-    if (objetos?.cones?.marcado) {
-      objetosStr += `${objetos.cones.quantidade || 0} CONE(S) `;
-    }
-    Object.keys(objetos || {}).forEach(item => {
-      if (item !== 'cones' && objetos[item]) {
-        objetosStr += `${item.toUpperCase()} `;
+    // Objetos (cada item em linha separada)
+    if (objetos) {
+      if (objetos?.cones?.marcado) {
+        writeSectionLine('OBJETOS ENCONTRADOS NA BASE', `${objetos.cones.quantidade || 0} CONE(S)`);
       }
-    });
-    if (objetos['NENHUMA DAS OPÇÕES']?.marcado) {
-      objetosStr += objetos['NENHUMA DAS OPÇÕES'].outros?.toUpperCase() || 'NENHUMA DAS OPÇÕES';
+      Object.keys(objetos).forEach(item => {
+        if (item !== 'cones' && objetos[item]?.marcado) {
+          writeSectionLine('OBJETOS ENCONTRADOS NA BASE', item.toUpperCase());
+        }
+      });
+      if (objetos['NENHUMA DAS OPÇÕES']?.marcado) {
+        writeSectionLine('OBJETOS ENCONTRADOS NA BASE', objetos['NENHUMA DAS OPÇÕES'].outros?.toUpperCase() || 'NENHUMA DAS OPÇÕES');
+      }
+    } else {
+      writeSectionLine('OBJETOS ENCONTRADOS NA BASE', 'NENHUMA DAS OPÇÕES');
     }
-    // Objetos
-writeSectionLine('OBJETOS ENCONTRADOS NA BASE', objetosStr || 'NENHUMA DAS OPÇÕES');
 
-// Patrulhamentos
-Object.keys(patrulhamento || {}).forEach(item => {
-  const detalhes = patrulhamento[item]?.primeiro || '';
-  writeSectionLine('PATRULHAMENTO PREVENTIVO', `${item.toUpperCase()} ${detalhes.toUpperCase()}`);
-});
+    // Patrulhamentos
+    if (patrulhamento && Object.keys(patrulhamento).length > 0) {
+      Object.keys(patrulhamento).forEach(item => {
+        const detalhes = patrulhamento[item]?.primeiro || '';
+        writeSectionLine('PATRULHAMENTO PREVENTIVO', `${item.toUpperCase()} ${detalhes.toUpperCase()}`.trim());
+      });
+    } else {
+      writeSectionLine('PATRULHAMENTO PREVENTIVO', '-');
+    }
 
-// Ocorrências
-Object.keys(ocorrencias || {}).forEach(item => {
-  const detalhes = ocorrencias[item]?.detalhes || '';
-  writeSectionLine('OCORRÊNCIA', `${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
-});
+    // Ocorrências
+    if (ocorrencias && Object.keys(ocorrencias).length > 0) {
+      Object.keys(ocorrencias).forEach(item => {
+        const detalhes = ocorrencias[item]?.detalhes || '';
+        writeSectionLine('OCORRÊNCIA', `${item.toUpperCase()}: ${detalhes.toUpperCase()}`.trim());
+      });
+    } else {
+      writeSectionLine('OCORRÊNCIA', '-');
+    }
 
     // Observações
     writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
 
     cursorY += 20;
-    // writeLine('IMPORTAR FOTOS', '-');
-
-    cursorY += 40;
     writeLine('Added Time', `${dataInicio} ${horaInicio}`);
     writeLine('Task Owner', 'gcmatalaiaal@gmail.com');
 
     pdfDoc.moveDown(2);
-    pdfDoc.fontSize(14).fillColor('gray').text('RForms', { align: 'center' }).fillColor('black');        // volta para preto para o restante do PDF
-
+    pdfDoc.fontSize(14).fillColor('gray').text('RForms', { align: 'center' }).fillColor('black');
 
     pdfDoc.end();
   });
