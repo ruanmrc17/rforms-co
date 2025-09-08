@@ -51,7 +51,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     const boxWidth = 500;
     let cursorY = startY;
 
-    pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
+    // pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
     // Função para escrever linhas de texto com quebra automática
     function writeLine(label, value) {

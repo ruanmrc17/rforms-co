@@ -140,7 +140,7 @@ h1, h2 {
   border-radius: 6px;
   border: 1px solid #ccc;
   min-height: 120px; /* maior altura */
-  width: 97%; /* largura total do container */
+  width: 85%; /* largura total do container */
   max-width: 100%; /* garante que não ultrapasse o container */
   transition: border-color 0.3s ease;
 }

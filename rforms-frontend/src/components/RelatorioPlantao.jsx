@@ -96,7 +96,7 @@ export default function RelatorioPlantao() {
       ...prev,
       objetos: { ...prev.objetos, [name]: { ...prev.objetos[name], marcado: checked } },
     }));
-  } else if (type === 'text' && name === 'NENHUMA_OUTROS') {
+  } else if (type === 'textarea' && name === 'NENHUMA_OUTROS') {
     setData(prev => ({
       ...prev,
       objetos: { ...prev.objetos, 'NENHUMA DAS OPÇÕES': { ...prev.objetos['NENHUMA DAS OPÇÕES'], outros: value } },
@@ -179,7 +179,7 @@ else {
   return (
     <div className="form-container">
       <img src="/seglogoata.jpg" alt="Logo" className="site-logo" />
-      
+
       <h2>SECRETARIA DE DEFESA SOCIAL</h2>
       <h3>GUARDA CIVIL MUNICIPAL DE ATALAIA - AL</h3>
       <h3>INSPETORES GCM ATALAIA - AL</h3>
@@ -246,13 +246,12 @@ else {
           </label>
 
           {data.objetos['NENHUMA DAS OPÇÕES'].marcado && (
-            <input
-              type="text"
+            <textarea
               name="NENHUMA_OUTROS"
               placeholder="Quais materiais foram encontrados?"
               value={data.objetos['NENHUMA DAS OPÇÕES'].outros}
               onChange={handleChange}
-              style={{ marginLeft: '10px', width: '300px' }}
+              style={{ marginLeft: '10px', width: '300px', minHeight: '100px' }}
             />
           )}
         </fieldset>
@@ -307,7 +306,7 @@ else {
             value={data.observacoes}
             onChange={handleChange}
   rows={5} // maior altura inicial
-  style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+  style={{ width: '90%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
           />
         </fieldset>
 
