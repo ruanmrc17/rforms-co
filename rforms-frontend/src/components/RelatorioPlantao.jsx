@@ -300,7 +300,7 @@ export default function RelatorioPlantao() {
             value={data.observacoes}
             onChange={handleChange}
             rows={5}
-            style={{ width: '80%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+            style={{ width: '87%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
             disabled={isSubmitting}
           />
         </fieldset>
