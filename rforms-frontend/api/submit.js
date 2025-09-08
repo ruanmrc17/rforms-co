@@ -138,7 +138,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
 
     cursorY += 20;
-    writeLine('Tempo de Início', `${dataInicio} ${horaInicio}`);
+    writeLine('Tempo de Início do Relatório', `${dataInicio}|${horaInicio}`);
     writeLine('Enviado para', 'gcmatalaiaal@gmail.com');
 
     pdfDoc.moveDown(2);
