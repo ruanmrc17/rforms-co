@@ -3,23 +3,24 @@ import '../styles/RelatorioPlantao.css';
 
 export default function RelatorioPlantao() {
   const [data, setData] = useState({
-  nome: '',
-  matricula: '',
-  dataInicio: '',
-  horaInicio: '',
-  dataSaida: '',
-  horaSaida: '',
-  objetos: {
-    cones: { marcado: false, quantidade: 1 },
-    'NENHUMA DAS OPÇÕES': { marcado: false, outros: '' },
-  },
-  patrulhamento: {},
-  ocorrencias: {}, // <-- inicializa aqui
-  observacoes: '',
-  fotos: null,
-  videos: null,
-});
+    nome: '',
+    matricula: '',
+    dataInicio: '',
+    horaInicio: '',
+    dataSaida: '',
+    horaSaida: '',
+    objetos: {
+      cones: { marcado: false, quantidade: 1 },
+      'NENHUMA DAS OPÇÕES': { marcado: false, outros: '' },
+    },
+    patrulhamento: {},
+    ocorrencias: {},
+    observacoes: '',
+    fotos: null,
+    videos: null,
+  });
 
+  const [isSubmitting, setIsSubmitting] = useState(false); // estado de envio
 
   const objetosList = [
     'CELULAR',
@@ -75,146 +76,138 @@ export default function RelatorioPlantao() {
     'CRIME CONTRA O IDOSO',
     'DESACATO',
     'OUTROS'
-  ]
+  ];
 
- const handleChange = (e) => {
-  const { name, value, type, checked, files } = e.target;
+  const handleChange = (e) => {
+    const { name, value, type, checked, files } = e.target;
 
-  // Objetos específicos
-  if (type === 'checkbox' && name === 'CONE(S)') {
-    setData(prev => ({
-      ...prev,
-      objetos: { ...prev.objetos, cones: { ...prev.objetos.cones, marcado: checked } },
-    }));
-  } else if (type === 'number' && name === 'quantidadeCones') {
-    setData(prev => ({
-      ...prev,
-      objetos: { ...prev.objetos, cones: { ...prev.objetos.cones, quantidade: value } },
-    }));
-  } else if (type === 'checkbox' && name === 'NENHUMA DAS OPÇÕES') {
-    setData(prev => ({
-      ...prev,
-      objetos: { ...prev.objetos, [name]: { ...prev.objetos[name], marcado: checked } },
-    }));
-  } else if (type === 'textarea' && name === 'NENHUMA_OUTROS') {
-    setData(prev => ({
-      ...prev,
-      objetos: { ...prev.objetos, 'NENHUMA DAS OPÇÕES': { ...prev.objetos['NENHUMA DAS OPÇÕES'], outros: value } },
-    }));
-  } else if (type === 'checkbox') {
-    setData(prev => ({ ...prev, objetos: { ...prev.objetos, [name]: checked } }));
-  } else if (type === 'file') {
-    setData(prev => ({ ...prev, [name]: files }));
-  } 
-  // Patrulhamento
-  else if (name.startsWith('patrulhamento')) {
-    const [, item, field] = name.split('-');
-    setData(prev => ({
-      ...prev,
-      patrulhamento: {
-        ...prev.patrulhamento,
-        [item]: { ...prev.patrulhamento[item], [field]: value },
-      },
-    }));
-  }
-  // Ocorrências
-  else if (name.startsWith('ocorrencias|')) {
-  const [, item, field] = name.split('|');
-  setData(prev => ({
-    ...prev,
-    ocorrencias: {
-      ...prev.ocorrencias,
-      [item]: { ...prev.ocorrencias[item], [field]: value },
-    },
-  }));
-}
-
-
-
-else {
+    if (type === 'checkbox' && name === 'CONE(S)') {
+      setData(prev => ({
+        ...prev,
+        objetos: { ...prev.objetos, cones: { ...prev.objetos.cones, marcado: checked } },
+      }));
+    } else if (type === 'number' && name === 'quantidadeCones') {
+      setData(prev => ({
+        ...prev,
+        objetos: { ...prev.objetos, cones: { ...prev.objetos.cones, quantidade: value } },
+      }));
+    } else if (type === 'checkbox' && name === 'NENHUMA DAS OPÇÕES') {
+      setData(prev => ({
+        ...prev,
+        objetos: { ...prev.objetos, [name]: { ...prev.objetos[name], marcado: checked } },
+      }));
+    } else if (type === 'textarea' && name === 'NENHUMA_OUTROS') {
+      setData(prev => ({
+        ...prev,
+        objetos: { ...prev.objetos, 'NENHUMA DAS OPÇÕES': { ...prev.objetos['NENHUMA DAS OPÇÕES'], outros: value } },
+      }));
+    } else if (type === 'checkbox') {
+      setData(prev => ({ ...prev, objetos: { ...prev.objetos, [name]: checked } }));
+    } else if (type === 'file') {
+      setData(prev => ({ ...prev, [name]: files }));
+    } else if (name.startsWith('patrulhamento')) {
+      const [, item, field] = name.split('-');
+      setData(prev => ({
+        ...prev,
+        patrulhamento: {
+          ...prev.patrulhamento,
+          [item]: { ...prev.patrulhamento[item], [field]: value },
+        },
+      }));
+    } else if (name.startsWith('ocorrencias|')) {
+      const [, item, field] = name.split('|');
+      setData(prev => ({
+        ...prev,
+        ocorrencias: {
+          ...prev.ocorrencias,
+          [item]: { ...prev.ocorrencias[item], [field]: value },
+        },
+      }));
+    } else {
       setData(prev => ({ ...prev, [name]: value }));
-  }
-};
+    }
+  };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    setIsSubmitting(true); // desabilita o botão
 
-  const formDataToSend = new FormData();
-
-  Object.keys(data).forEach(key => {
-    if (key === 'objetos' || key === 'patrulhamento' || key === 'ocorrencias') {
-      formDataToSend.append(key, JSON.stringify(data[key]));
-      console.log(data[key])
-    } else if (key === 'fotos' || key === 'videos') {
-      if (data[key]) {
-        for (let i = 0; i < data[key].length; i++) {
-          formDataToSend.append(key, data[key][i]);
+    const formDataToSend = new FormData();
+    Object.keys(data).forEach(key => {
+      if (key === 'objetos' || key === 'patrulhamento' || key === 'ocorrencias') {
+        formDataToSend.append(key, JSON.stringify(data[key]));
+      } else if (key === 'fotos' || key === 'videos') {
+        if (data[key]) {
+          for (let i = 0; i < data[key].length; i++) {
+            formDataToSend.append(key, data[key][i]);
+          }
         }
+      } else {
+        formDataToSend.append(key, data[key]);
       }
-    } else {
-      formDataToSend.append(key, data[key]);
-    }
-  });
-
-  try {
-    const res = await fetch('https://rforms-co.vercel.app/api/submit', {
-      method: 'POST',
-      body: formDataToSend,
     });
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({ error: res.statusText }));
-      alert(`Erro do servidor: ${errorData.error}`);
-      return;
-    }
+    try {
+      const res = await fetch('https://rforms-co.vercel.app/api/submit', {
+        method: 'POST',
+        body: formDataToSend,
+      });
 
-    const result = await res.json();
-    alert(result.message || 'Relatório enviado com sucesso!');
-  } catch (err) {
-    console.error(err);
-    alert(`Erro desconhecido: ${err.message}`);
-  }
-};
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: res.statusText }));
+        alert(`Erro do servidor: ${errorData.error}`);
+      } else {
+        const result = await res.json();
+        alert(result.message || 'Relatório enviado com sucesso!');
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Erro desconhecido: ${err.message}`);
+    } finally {
+      setIsSubmitting(false); // habilita o botão novamente
+    }
+  };
 
   return (
     <div className="form-container">
       <img src="/seglogoata.jpg" alt="Logo" className="site-logo" />
-
       <h2>SECRETARIA DE DEFESA SOCIAL</h2>
       <h3>GUARDA CIVIL MUNICIPAL DE ATALAIA - AL</h3>
       <h3>INSPETORES GCM ATALAIA - AL</h3>
       <h3>RELATÓRIO DIÁRIO DE PLANTÃO</h3>
 
       <form onSubmit={handleSubmit} className="form-base">
+        {/* NOME E MATRÍCULA */}
         <div className="field-group">
           <label>Nome:</label>
-          <input type="text" name="nome" value={data.nome} onChange={handleChange} required />
+          <input type="text" name="nome" value={data.nome} onChange={handleChange} disabled={isSubmitting} required />
         </div>
-
         <div className="field-group">
           <label>Matrícula:</label>
-          <input type="text" name="matricula" value={data.matricula} onChange={handleChange} required />
+          <input type="text" name="matricula" value={data.matricula} onChange={handleChange} disabled={isSubmitting} required />
         </div>
 
+        {/* DATAS E HORAS */}
         <div className="field-group">
           <label>Data Início:</label>
-          <input type="date" name="dataInicio" value={data.dataInicio} onChange={handleChange} required />
+          <input type="date" name="dataInicio" value={data.dataInicio} onChange={handleChange} disabled={isSubmitting} required />
           <label>Hora Início:</label>
-          <input type="time" name="horaInicio" value={data.horaInicio} onChange={handleChange} required />
+          <input type="time" name="horaInicio" value={data.horaInicio} onChange={handleChange} disabled={isSubmitting} required />
         </div>
-
         <div className="field-group">
           <label>Data Saída:</label>
-          <input type="date" name="dataSaida" value={data.dataSaida} onChange={handleChange} required />
+          <input type="date" name="dataSaida" value={data.dataSaida} onChange={handleChange} disabled={isSubmitting} required />
           <label>Hora Saída:</label>
-          <input type="time" name="horaSaida" value={data.horaSaida} onChange={handleChange} required />
+          <input type="time" name="horaSaida" value={data.horaSaida} onChange={handleChange} disabled={isSubmitting} required />
         </div>
 
+        {/* OBJETOS */}
         <fieldset className="checkbox-group">
           <legend>OBJETOS ENCONTRADOS NA BASE:</legend>
-          <label>
-            <input type="checkbox" name="CONE(S)" checked={data.objetos.cones.marcado} onChange={handleChange} />
-            CONE(S)
+
+          <label className="checkbox-item">
+            <input type="checkbox" name="CONE(S)" checked={data.objetos.cones.marcado} onChange={handleChange} disabled={isSubmitting} />
+            <span>CONE(S)</span>
             {data.objetos.cones.marcado && (
               <input
                 type="number"
@@ -224,25 +217,27 @@ else {
                 placeholder="Quantidade"
                 min="1"
                 style={{ marginLeft: '10px', width: '80px' }}
+                disabled={isSubmitting}
               />
             )}
           </label>
 
           {objetosList.map(item => (
-            <label key={item}>
-              <input type="checkbox" name={item} checked={!!data.objetos[item]} onChange={handleChange} />
-              {item}
+            <label key={item} className="checkbox-item">
+              <input type="checkbox" name={item} checked={!!data.objetos[item]} onChange={handleChange} disabled={isSubmitting} />
+              <span>{item}</span>
             </label>
           ))}
 
-          <label>
+          <label className="checkbox-item">
             <input
               type="checkbox"
               name="NENHUMA DAS OPÇÕES"
               checked={data.objetos['NENHUMA DAS OPÇÕES'].marcado}
               onChange={handleChange}
+              disabled={isSubmitting}
             />
-            NENHUMA DAS OPÇÕES
+            <span>NENHUMA DAS OPÇÕES</span>
           </label>
 
           {data.objetos['NENHUMA DAS OPÇÕES'].marcado && (
@@ -252,13 +247,15 @@ else {
               value={data.objetos['NENHUMA DAS OPÇÕES'].outros}
               onChange={handleChange}
               style={{ marginLeft: '10px', width: '200px', minHeight: '100px' }}
+              disabled={isSubmitting}
             />
           )}
         </fieldset>
 
+        {/* PATRULHAMENTO */}
         <fieldset className="radio-group">
           <legend>PATRULHAMENTO PREVENTIVO:</legend>
-          {patrulhamentoList.map((item) => (
+          {patrulhamentoList.map(item => (
             <div key={item} className="patrulhamento-item">
               <strong>{item}</strong>
               <textarea
@@ -266,38 +263,35 @@ else {
                 placeholder="Detalhes do patrulhamento"
                 value={data.patrulhamento[item]?.primeiro || ''}
                 onChange={handleChange}
-  rows={5} // maior altura inicial
-  style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+                rows={5}
+                style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+                disabled={isSubmitting}
               />
               <p className="patrulhamento-texto">{patrulhamentoTextos[item]}</p>
             </div>
           ))}
         </fieldset>
 
-<fieldset className="radio-group">
-  <legend>OCORRÊNCIAS:</legend>
-  {ocorrenciasList.map((item) => (
-    <div key={item} className="patrulhamento-item">
-      <strong>{item}</strong>
-      <textarea
-        placeholder="Detalhes da ocorrência"
-  name={`ocorrencias|${item}|detalhes`}
-  value={data.ocorrencias[item]?.detalhes || ''}
-  onChange={handleChange}
+        {/* OCORRÊNCIAS */}
+        <fieldset className="radio-group">
+          <legend>OCORRÊNCIAS:</legend>
+          {ocorrenciasList.map(item => (
+            <div key={item} className="patrulhamento-item">
+              <strong>{item}</strong>
+              <textarea
+                placeholder="Detalhes da ocorrência"
+                name={`ocorrencias|${item}|detalhes`}
+                value={data.ocorrencias[item]?.detalhes || ''}
+                onChange={handleChange}
+                rows={5}
+                style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+                disabled={isSubmitting}
+              />
+            </div>
+          ))}
+        </fieldset>
 
-        rows={5}
-        style={{
-          width: '100%',
-          resize: 'vertical',
-          marginTop: '5px',
-          minHeight: '100px'
-        }}
-      />
-    </div>
-  ))}
-</fieldset>
-
-
+        {/* OBSERVAÇÕES */}
         <fieldset className="observacoes-group">
           <legend>Observações:</legend>
           <textarea
@@ -305,28 +299,32 @@ else {
             placeholder="Escreva suas observações aqui"
             value={data.observacoes}
             onChange={handleChange}
-  rows={5} // maior altura inicial
-  style={{ width: '80%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+            rows={5}
+            style={{ width: '80%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+            disabled={isSubmitting}
           />
         </fieldset>
 
+        {/* FOTOS E VÍDEOS */}
         <fieldset>
           <legend style={{ marginTop: '20px' }}>IMPORTAR FOTOS</legend>
           <label htmlFor="fotos" className="upload-label">📷 Selecionar Fotos</label>
-          <input id="fotos" type="file" name="fotos" accept="image/*" multiple onChange={handleChange} />
+          <input id="fotos" type="file" name="fotos" accept="image/*" multiple onChange={handleChange} disabled={isSubmitting} />
           {data.fotos && data.fotos.length > 0 && (
             <p className="upload-info">{data.fotos.length} foto(s) selecionada(s)</p>
           )}
 
           <legend>IMPORTAR VÍDEOS</legend>
           <label htmlFor="videos" className="upload-label">🎥 Selecionar Vídeos</label>
-          <input id="videos" type="file" name="videos" accept="video/*" multiple onChange={handleChange} />
+          <input id="videos" type="file" name="videos" accept="video/*" multiple onChange={handleChange} disabled={isSubmitting} />
           {data.videos && data.videos.length > 0 && (
             <p className="upload-info">{data.videos.length} vídeo(s) selecionado(s)</p>
           )}
         </fieldset>
 
-        <button type="submit" className="form-button">ENVIAR RELATÓRIO</button>
+        <button type="submit" className="form-button" disabled={isSubmitting}>
+          {isSubmitting ? 'ENVIANDO...' : 'ENVIAR RELATÓRIO'}
+        </button>
       </form>
     </div>
   );
