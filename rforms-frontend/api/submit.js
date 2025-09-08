@@ -70,6 +70,24 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
 
   cursorY += 25;
 }
+function writeSectionLine(label, value) {
+  pdfDoc.font('Helvetica-Bold')
+    .fontSize(11)
+    .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
+
+  pdfDoc.font('Helvetica')
+    .fontSize(11)
+    .text(value || '-');
+
+  // Desenhar linha separadora logo abaixo
+  pdfDoc.moveTo(startX + 10, cursorY + 28) // começa à esquerda
+    .lineTo(startX + boxWidth - 10, cursorY + 28) // vai até a direita
+    .strokeColor('#999') // cinza claro
+    .lineWidth(0.5)
+    .stroke();
+
+  cursorY += 35; // aumenta espaçamento para dar respiro
+}
 
 
     // Campos principais
@@ -91,19 +109,20 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     if (objetos['NENHUMA DAS OPÇÕES']?.marcado) {
       objetosStr += objetos['NENHUMA DAS OPÇÕES'].outros?.toUpperCase() || 'NENHUMA DAS OPÇÕES';
     }
-    writeLine('OBJETOS ENCONTRADOS NA BASE', objetosStr || 'NENHUMA DAS OPÇÕES');
+    // Objetos
+writeSectionLine('OBJETOS ENCONTRADOS NA BASE', objetosStr || 'NENHUMA DAS OPÇÕES');
 
-    // Patrulhamentos
-    Object.keys(patrulhamento || {}).forEach(item => {
-      const detalhes = patrulhamento[item]?.primeiro || '';
-      writeLine('PATRULHAMENTO PREVENTIVO', `${item.toUpperCase()} ${detalhes.toUpperCase()}`);
-    });
+// Patrulhamentos
+Object.keys(patrulhamento || {}).forEach(item => {
+  const detalhes = patrulhamento[item]?.primeiro || '';
+  writeSectionLine('PATRULHAMENTO PREVENTIVO', `${item.toUpperCase()} ${detalhes.toUpperCase()}`);
+});
 
-    // Ocorrências
-    Object.keys(ocorrencias || {}).forEach(item => {
-      const detalhes = ocorrencias[item]?.detalhes || '';
-      writeLine('OCORRÊNCIA', `${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
-    });
+// Ocorrências
+Object.keys(ocorrencias || {}).forEach(item => {
+  const detalhes = ocorrencias[item]?.detalhes || '';
+  writeSectionLine('OCORRÊNCIA', `${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
+});
 
     // Observações
     writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
