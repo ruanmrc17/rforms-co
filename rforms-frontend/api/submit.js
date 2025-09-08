@@ -138,11 +138,11 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
 
     cursorY += 20;
-    writeLine('Added Time', `${dataInicio} ${horaInicio}`);
-    writeLine('Task Owner', 'gcmatalaiaal@gmail.com');
+    writeLine('Tempo de Início', `${dataInicio} ${horaInicio}`);
+    writeLine('Enviado para', 'gcmatalaiaal@gmail.com');
 
     pdfDoc.moveDown(2);
-    pdfDoc.fontSize(14).fillColor('gray').text('RForms', { align: 'center' }).fillColor('black');
+    pdfDoc.fontSize(14).fillColor('gray').text('Powered BY RNForms', { align: 'center' }).fillColor('black');
 
     pdfDoc.end();
   });
