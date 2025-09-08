@@ -54,28 +54,37 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
     function writeLine(label, value) {
-      pdfDoc.font('Helvetica-Bold')
-        .fontSize(11)
-        .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
+  const maxWidth = boxWidth - 20; // largura do texto dentro da caixa
+  pdfDoc.font('Helvetica-Bold')
+    .fontSize(11)
+    .text(`${label}: `, startX + 10, cursorY, { continued: true, width: maxWidth });
 
-      pdfDoc.font('Helvetica')
-        .fontSize(11)
-        .text(value || '-');
+  const options = { width: maxWidth };
+  const textHeight = pdfDoc.heightOfString(value || '-', options);
 
-      cursorY += 25;
-    }
+  pdfDoc.font('Helvetica')
+    .fontSize(11)
+    .text(value || '-', { width: maxWidth });
 
-    function writeSectionLine(label, value) {
-      pdfDoc.font('Helvetica-Bold')
-        .fontSize(11)
-        .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
+  cursorY += textHeight + 10; // aumenta o cursor de acordo com o tamanho do texto
+}
 
-      pdfDoc.font('Helvetica')
-        .fontSize(11)
-        .text(value || '-');
+function writeSectionLine(label, value) {
+  const maxWidth = boxWidth - 20;
+  pdfDoc.font('Helvetica-Bold')
+    .fontSize(11)
+    .text(`${label}: `, startX + 10, cursorY, { continued: true, width: maxWidth });
 
-      cursorY += 25;
-    }
+  const options = { width: maxWidth };
+  const textHeight = pdfDoc.heightOfString(value || '-', options);
+
+  pdfDoc.font('Helvetica')
+    .fontSize(11)
+    .text(value || '-', { width: maxWidth });
+
+  cursorY += textHeight + 10;
+}
+
 
     // Campos principais
     writeLine('NOME', nome?.toUpperCase() || '-');
