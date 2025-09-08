@@ -58,10 +58,19 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
     function writeLine(label, value) {
-      pdfDoc.fontSize(11)
-        .text(`${label}: ${value || '-'}`, startX + 10, cursorY + 10, { width: boxWidth - 20 });
-      cursorY += 25;
-    }
+  pdfDoc.font('Helvetica-Bold') // label em negrito
+    .fontSize(11)
+    .text(`${label}: `, startX + 10, cursorY + 10, {
+      continued: true // continua na mesma linha
+    });
+
+  pdfDoc.font('Helvetica') // valor normal
+    .fontSize(11)
+    .text(value || '-');
+
+  cursorY += 25;
+}
+
 
     // Campos principais
     writeLine('NOME', nome?.toUpperCase() || '-');
