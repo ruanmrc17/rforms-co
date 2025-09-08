@@ -40,7 +40,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     // === Inserir Logo (topo direito) ===
     const logoPath = path.join(__dirname, 'seglogoata.jpg');
     if (fs.existsSync(logoPath)) {
-      pdfDoc.image(logoPath, 450, 30, { width: 80 }); // canto direito superior
+      pdfDoc.image(logoPath, 480, 30, { width: 80 }); // canto direito superior
     }
 
     // Cabeçalho (menor e abaixo da logo)
