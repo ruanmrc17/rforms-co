@@ -44,7 +44,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     }
 
     // Cabeçalho (menor e abaixo da logo)
-    pdfDoc.fontSize(12).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO Report', 0, 90, {
+    pdfDoc.fontSize(12).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO', 0, 90, {
       align: 'center'
     });
     pdfDoc.moveDown(2);
@@ -109,14 +109,15 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
 
     cursorY += 20;
-    writeLine('IMPORTAR FOTOS', '-');
+    // writeLine('IMPORTAR FOTOS', '-');
 
     cursorY += 40;
     writeLine('Added Time', `${dataInicio} ${horaInicio}`);
     writeLine('Task Owner', 'gcmatalaiaal@gmail.com');
 
     pdfDoc.moveDown(2);
-    pdfDoc.fontSize(9).text('RForms', { align: 'center' });
+    pdfDoc.fontSize(14).fillColor('gray').text('RForms', { align: 'center' }).fillColor('black');        // volta para preto para o restante do PDF
+
 
     pdfDoc.end();
   });
