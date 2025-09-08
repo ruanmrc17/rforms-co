@@ -264,7 +264,7 @@ export default function RelatorioPlantao() {
                 value={data.patrulhamento[item]?.primeiro || ''}
                 onChange={handleChange}
                 rows={5}
-                style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+                style={{ width: '94%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
                 disabled={isSubmitting}
               />
               <p className="patrulhamento-texto">{patrulhamentoTextos[item]}</p>
@@ -284,7 +284,7 @@ export default function RelatorioPlantao() {
                 value={data.ocorrencias[item]?.detalhes || ''}
                 onChange={handleChange}
                 rows={5}
-                style={{ width: '100%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
+                style={{ width: '94%', resize: 'vertical', marginTop: '5px', minHeight: '100px' }}
                 disabled={isSubmitting}
               />
             </div>
