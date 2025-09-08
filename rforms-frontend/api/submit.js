@@ -38,7 +38,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
     // === Inserir Logo ===
-    const logoPath = path.join(__dirname, 'atalaialogo.jpg');
+    const logoPath = path.join(__dirname, 'seglogoata.jpg');
     if (fs.existsSync(logoPath)) {
       pdfDoc.image(logoPath, 450, 20, { width: 100 });
     }
