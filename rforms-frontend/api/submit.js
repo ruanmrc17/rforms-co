@@ -18,7 +18,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Função para formatar data em extenso
 function formatDateExtenso(dataStr) {
   if (!dataStr) return '';
   const meses = [
@@ -58,37 +57,35 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
     function writeLine(label, value) {
-  pdfDoc.font('Helvetica-Bold') // label em negrito
-    .fontSize(11)
-    .text(`${label}: `, startX + 10, cursorY + 10, {
-      continued: true // continua na mesma linha
-    });
+      pdfDoc.font('Helvetica-Bold')
+        .fontSize(11)
+        .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
 
-  pdfDoc.font('Helvetica') // valor normal
-    .fontSize(11)
-    .text(value || '-');
+      pdfDoc.font('Helvetica')
+        .fontSize(11)
+        .text(value || '-');
 
-  cursorY += 25;
-}
-function writeSectionLine(label, value) {
-  pdfDoc.font('Helvetica-Bold')
-    .fontSize(11)
-    .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
+      cursorY += 25;
+    }
 
-  pdfDoc.font('Helvetica')
-    .fontSize(11)
-    .text(value || '-');
+    function writeSectionLine(label, value) {
+      pdfDoc.font('Helvetica-Bold')
+        .fontSize(11)
+        .text(`${label}: `, startX + 10, cursorY + 10, { continued: true });
 
-  // Desenhar linha separadora logo abaixo
-  pdfDoc.moveTo(startX + 10, cursorY + 28) // começa à esquerda
-    .lineTo(startX + boxWidth - 10, cursorY + 28) // vai até a direita
-    .strokeColor('#999') // cinza claro
-    .lineWidth(0.5)
-    .stroke();
+      pdfDoc.font('Helvetica')
+        .fontSize(11)
+        .text(value || '-');
 
-  cursorY += 35; // aumenta espaçamento para dar respiro
-}
+      // Desenhar linha separadora logo abaixo
+      pdfDoc.moveTo(startX + 10, cursorY + 28)
+        .lineTo(startX + boxWidth - 10, cursorY + 28)
+        .strokeColor('#999')
+        .lineWidth(0.5)
+        .stroke();
 
+      cursorY += 35;
+    }
 
     // Campos principais
     writeLine('NOME', nome?.toUpperCase() || '-');
@@ -97,50 +94,50 @@ function writeSectionLine(label, value) {
     writeLine('DATA SAÍDA', `${dataSaida || '-'}  HORA SAÍDA: ${horaSaida || '-'}`);
 
     // Objetos
-    let objetosStr = '';
+    let objetosArray = [];
     if (objetos?.cones?.marcado) {
-      objetosStr += `${objetos.cones.quantidade || 0} CONE(S) `;
+      objetosArray.push(`${objetos.cones.quantidade || 0} CONE(S)`);
     }
     Object.keys(objetos || {}).forEach(item => {
-      if (item !== 'cones' && objetos[item]) {
-        objetosStr += `${item.toUpperCase()} `;
+      if (item !== 'cones' && objetos[item]?.marcado) {
+        objetosArray.push(item.toUpperCase());
       }
     });
     if (objetos['NENHUMA DAS OPÇÕES']?.marcado) {
-      objetosStr += objetos['NENHUMA DAS OPÇÕES'].outros?.toUpperCase() || 'NENHUMA DAS OPÇÕES';
+      objetosArray.push(objetos['NENHUMA DAS OPÇÕES'].outros?.toUpperCase() || 'NENHUMA DAS OPÇÕES');
     }
-    // Objetos
-writeSectionLine('OBJETOS ENCONTRADOS NA BASE', objetosStr || 'NENHUMA DAS OPÇÕES');
+    writeSectionLine('OBJETOS ENCONTRADOS NA BASE', objetosArray.join(', ') || 'NENHUMA DAS OPÇÕES');
 
-// Patrulhamentos
-Object.keys(patrulhamento || {}).forEach(item => {
-  const detalhes = patrulhamento[item]?.primeiro || '';
-  writeSectionLine('PATRULHAMENTO PREVENTIVO', `${item.toUpperCase()} ${detalhes.toUpperCase()}`);
-});
+    // Patrulhamentos
+    let patrulhamentoArray = [];
+    Object.keys(patrulhamento || {}).forEach(item => {
+      const detalhes = patrulhamento[item]?.primeiro || '';
+      patrulhamentoArray.push(`${item.toUpperCase()} ${detalhes.toUpperCase()}`.trim());
+    });
+    writeSectionLine('PATRULHAMENTO PREVENTIVO', patrulhamentoArray.join('; ') || '-');
 
-// Ocorrências
-Object.keys(ocorrencias || {}).forEach(item => {
-  const detalhes = ocorrencias[item]?.detalhes || '';
-  writeSectionLine('OCORRÊNCIA', `${item.toUpperCase()}: ${detalhes.toUpperCase()}`);
-});
+    // Ocorrências
+    let ocorrenciasArray = [];
+    Object.keys(ocorrencias || {}).forEach(item => {
+      const detalhes = ocorrencias[item]?.detalhes || '';
+      ocorrenciasArray.push(`${item.toUpperCase()}: ${detalhes.toUpperCase()}`.trim());
+    });
+    writeSectionLine('OCORRÊNCIA', ocorrenciasArray.join('; ') || '-');
 
     // Observações
     writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
 
     cursorY += 20;
-    // writeLine('IMPORTAR FOTOS', '-');
-
-    cursorY += 40;
     writeLine('Added Time', `${dataInicio} ${horaInicio}`);
     writeLine('Task Owner', 'gcmatalaiaal@gmail.com');
 
     pdfDoc.moveDown(2);
-    pdfDoc.fontSize(14).fillColor('gray').text('RForms', { align: 'center' }).fillColor('black');        // volta para preto para o restante do PDF
-
+    pdfDoc.fontSize(14).fillColor('gray').text('RForms', { align: 'center' }).fillColor('black');
 
     pdfDoc.end();
   });
 }
+
 
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
