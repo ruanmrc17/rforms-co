@@ -107,7 +107,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     writeLine('Task Owner', 'gcmatalaiaal@gmail.com');
 
     pdfDoc.moveDown(2);
-    pdfDoc.fontSize(9).text('Powered by Zoho Forms (simulação)', { align: 'center' });
+    pdfDoc.fontSize(9).text('RForms', { align: 'center' });
 
     pdfDoc.end();
   });
