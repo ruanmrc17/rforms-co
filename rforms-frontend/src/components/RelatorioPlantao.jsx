@@ -251,7 +251,7 @@ else {
               placeholder="Quais materiais foram encontrados?"
               value={data.objetos['NENHUMA DAS OPÇÕES'].outros}
               onChange={handleChange}
-              style={{ marginLeft: '10px', width: '300px', minHeight: '100px' }}
+              style={{ marginLeft: '10px', width: '200px', minHeight: '100px' }}
             />
           )}
         </fieldset>
