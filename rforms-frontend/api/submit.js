@@ -74,8 +74,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
         .fontSize(11)
         .text(value || '-');
 
-      // Linha removida
-      cursorY += 35;
+      cursorY += 25;
     }
 
     // Campos principais
@@ -84,38 +83,54 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     writeLine('DATA INICIO', `${dataInicio || '-'}  HORA INÍCIO: ${horaInicio || '-'}`);
     writeLine('DATA SAÍDA', `${dataSaida || '-'}  HORA SAÍDA: ${horaSaida || '-'}`);
 
-    // Objetos (cada item em linha separada)
+    // OBJETOS
+    let algumObjeto = false;
     if (objetos) {
-      if (objetos?.cones?.marcado) {
-        writeSectionLine('OBJETOS ENCONTRADOS NA BASE', `${objetos.cones.quantidade || 0} CONE(S)`);
+      // CONE(S)
+      if (objetos.cones?.marcado) {
+        writeSectionLine('OBJETOS ENCONTRADOS NA BASE', `${objetos.cones.quantidade || 1} CONE(S)`);
+        algumObjeto = true;
       }
-      Object.keys(objetos).forEach(item => {
-        if (item !== 'cones' && objetos[item]?.marcado) {
-          writeSectionLine('OBJETOS ENCONTRADOS NA BASE', item.toUpperCase());
+
+      // Demais objetos booleanos (CELULAR, etc)
+      Object.keys(objetos).forEach(key => {
+        if (key !== 'cones' && key !== 'NENHUMA DAS OPÇÕES') {
+          if (objetos[key] === true) {
+            writeSectionLine('OBJETOS ENCONTRADOS NA BASE', key.toUpperCase());
+            algumObjeto = true;
+          }
         }
       });
+
+      // NENHUMA DAS OPÇÕES
       if (objetos['NENHUMA DAS OPÇÕES']?.marcado) {
-        writeSectionLine('OBJETOS ENCONTRADOS NA BASE', objetos['NENHUMA DAS OPÇÕES'].outros?.toUpperCase() || 'NENHUMA DAS OPÇÕES');
+        const texto = objetos['NENHUMA DAS OPÇÕES'].outros?.trim();
+        writeSectionLine('OBJETOS ENCONTRADOS NA BASE', texto ? texto.toUpperCase() : 'NENHUMA DAS OPÇÕES');
+        algumObjeto = true;
       }
-    } else {
+    }
+
+    if (!algumObjeto) {
       writeSectionLine('OBJETOS ENCONTRADOS NA BASE', 'NENHUMA DAS OPÇÕES');
     }
 
-    // Patrulhamentos
+    // PATRULHAMENTOS
     if (patrulhamento && Object.keys(patrulhamento).length > 0) {
       Object.keys(patrulhamento).forEach(item => {
         const detalhes = patrulhamento[item]?.primeiro || '';
-        writeSectionLine('PATRULHAMENTO PREVENTIVO', `${item.toUpperCase()} ${detalhes.toUpperCase()}`.trim());
+        const texto = detalhes ? `${item.toUpperCase()}: ${detalhes.toUpperCase()}` : item.toUpperCase();
+        writeSectionLine('PATRULHAMENTO PREVENTIVO', texto);
       });
     } else {
       writeSectionLine('PATRULHAMENTO PREVENTIVO', '-');
     }
 
-    // Ocorrências
+    // OCORRÊNCIAS
     if (ocorrencias && Object.keys(ocorrencias).length > 0) {
       Object.keys(ocorrencias).forEach(item => {
         const detalhes = ocorrencias[item]?.detalhes || '';
-        writeSectionLine('OCORRÊNCIA', `${item.toUpperCase()}: ${detalhes.toUpperCase()}`.trim());
+        const texto = detalhes ? `${item.toUpperCase()}: ${detalhes.toUpperCase()}` : item.toUpperCase();
+        writeSectionLine('OCORRÊNCIA', texto);
       });
     } else {
       writeSectionLine('OCORRÊNCIA', '-');
@@ -134,6 +149,7 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.end();
   });
 }
+
 
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
