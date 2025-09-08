@@ -53,38 +53,30 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
 
     pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
+    // Função para escrever linhas de texto com quebra automática
     function writeLine(label, value) {
-  const maxWidth = boxWidth - 20; // largura do texto dentro da caixa
-  pdfDoc.font('Helvetica-Bold')
-    .fontSize(11)
-    .text(`${label}: `, startX + 10, cursorY, { continued: true, width: maxWidth });
+      const maxWidth = boxWidth - 20;
 
-  const options = { width: maxWidth };
-  const textHeight = pdfDoc.heightOfString(value || '-', options);
+      const labelHeight = pdfDoc.heightOfString(label + ':', { width: maxWidth });
+      pdfDoc.font('Helvetica-Bold').fontSize(11)
+            .text(label + ':', startX + 10, cursorY, { width: maxWidth });
 
-  pdfDoc.font('Helvetica')
-    .fontSize(11)
-    .text(value || '-', { width: maxWidth });
+      const textHeight = pdfDoc.heightOfString(value || '-', { width: maxWidth });
+      pdfDoc.font('Helvetica').fontSize(11)
+            .text(value || '-', startX + 10, cursorY + labelHeight, { width: maxWidth });
 
-  cursorY += textHeight + 10; // aumenta o cursor de acordo com o tamanho do texto
-}
+      cursorY += labelHeight + textHeight + 10;
 
-function writeSectionLine(label, value) {
-  const maxWidth = boxWidth - 20;
-  pdfDoc.font('Helvetica-Bold')
-    .fontSize(11)
-    .text(`${label}: `, startX + 10, cursorY, { continued: true, width: maxWidth });
+      // Quebra de página
+      if (cursorY > 780) {
+        pdfDoc.addPage();
+        cursorY = 50;
+      }
+    }
 
-  const options = { width: maxWidth };
-  const textHeight = pdfDoc.heightOfString(value || '-', options);
-
-  pdfDoc.font('Helvetica')
-    .fontSize(11)
-    .text(value || '-', { width: maxWidth });
-
-  cursorY += textHeight + 10;
-}
-
+    function writeSectionLine(label, value) {
+      writeLine(label, value);
+    }
 
     // Campos principais
     writeLine('NOME', nome?.toUpperCase() || '-');
@@ -95,13 +87,11 @@ function writeSectionLine(label, value) {
     // OBJETOS
     let algumObjeto = false;
     if (objetos) {
-      // CONE(S)
       if (objetos.cones?.marcado) {
         writeSectionLine('OBJETOS ENCONTRADOS NA BASE', `${objetos.cones.quantidade || 1} CONE(S)`);
         algumObjeto = true;
       }
 
-      // Demais objetos booleanos (CELULAR, etc)
       Object.keys(objetos).forEach(key => {
         if (key !== 'cones' && key !== 'NENHUMA DAS OPÇÕES') {
           if (objetos[key] === true) {
@@ -111,7 +101,6 @@ function writeSectionLine(label, value) {
         }
       });
 
-      // NENHUMA DAS OPÇÕES
       if (objetos['NENHUMA DAS OPÇÕES']?.marcado) {
         const texto = objetos['NENHUMA DAS OPÇÕES'].outros?.trim();
         writeSectionLine('OBJETOS ENCONTRADOS NA BASE', texto ? texto.toUpperCase() : 'NENHUMA DAS OPÇÕES');
@@ -158,7 +147,6 @@ function writeSectionLine(label, value) {
     pdfDoc.end();
   });
 }
-
 
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
