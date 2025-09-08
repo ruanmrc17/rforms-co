@@ -4,7 +4,8 @@ const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const nodemailer = require('nodemailer');
 const cors = require('cors');
-const path = require('path');
+const fs = require('fs');
+const { PassThrough } = require('stream');
 
 const app = express();
 const MAX_EMAIL_SIZE = 25 * 1024 * 1024; // 25MB
@@ -15,31 +16,25 @@ const upload = multer({ storage });
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const fs = require('fs');
-const path = require('path');
-const PDFDocument = require('pdfkit');
 
 // Função para formatar data em extenso
 function formatDateExtenso(dataStr) {
+  if (!dataStr) return '';
   const meses = [
     'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
     'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
   ];
   const [ano, mes, dia] = dataStr.split('-'); // esperado "YYYY-MM-DD"
-  return `${dia} de ${meses[parseInt(mes) - 1]} de ${ano}`;
+  return `${dia} de ${meses[parseInt(mes, 10) - 1]} de ${ano}`;
 }
 
-// Função para gerar o PDF
 // Função para gerar o PDF
 async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise((resolve) => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
     pdfDoc.on('data', chunk => chunks.push(chunk));
-    pdfDoc.on('end', () => {
-      const buffer = Buffer.concat(chunks);
-      resolve(buffer); // ✅ retorna só o buffer, não grava no disco
-    });
+    pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
 
     // Cabeçalho
     pdfDoc.fontSize(14).text('INSPETORES GCM ATALAIA - AL / RELATÓRIOS DE PLANTÃO Report', {
@@ -53,13 +48,11 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     const boxWidth = 500;
     let cursorY = startY;
 
-    // Desenhar quadrado
     pdfDoc.rect(startX, startY, boxWidth, 600).stroke();
 
-    // Função auxiliar para escrever linha
     function writeLine(label, value) {
       pdfDoc.fontSize(11)
-        .text(`${label}: ${value}`, startX + 10, cursorY + 10, { width: boxWidth - 20 });
+        .text(`${label}: ${value || '-'}`, startX + 10, cursorY + 10, { width: boxWidth - 20 });
       cursorY += 25;
     }
 
@@ -99,11 +92,9 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     // Observações
     writeLine('OBSERVAÇÕES', observacoes?.toUpperCase() || '-');
 
-    // Espaço extra
     cursorY += 20;
     writeLine('IMPORTAR FOTOS', '');
 
-    // Rodapé com data/hora
     cursorY += 40;
     writeLine('Added Time', `${dataInicio} ${horaInicio}`);
     writeLine('Task Owner', 'gcmatalaiaal@gmail.com');
@@ -111,30 +102,33 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
     pdfDoc.moveDown(2);
     pdfDoc.fontSize(9).text('Powered by Zoho Forms (simulação)', { align: 'center' });
 
-    // Finalizar
     pdfDoc.end();
   });
 }
 
-
 // Função para gerar ZIP
 function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF) {
   return new Promise((resolve, reject) => {
-    const zipChunks = [];
     const archive = archiver('zip', { zlib: { level: 9 } });
+    const passthrough = new PassThrough();
+    const chunks = [];
 
-    archive.on('data', chunk => zipChunks.push(chunk));
-    archive.on('error', err => reject(err));
-    archive.on('finish', () => resolve(Buffer.concat(zipChunks)));
+    passthrough.on('data', chunk => chunks.push(chunk));
+    passthrough.on('end', () => resolve(Buffer.concat(chunks)));
+    passthrough.on('error', reject);
+
+    archive.pipe(passthrough);
 
     archive.append(pdfBuffer, { name: `${nomeArquivoPDF}.pdf` });
 
-    if (arquivos.fotos) arquivos.fotos.forEach(f => archive.append(f.buffer, { name: `FOTOS/${f.originalname}` }));
-    if (arquivos.videos) arquivos.videos.forEach(v => archive.append(v.buffer, { name: `VIDEOS/${v.originalname}` }));
+    if (arquivos?.fotos) arquivos.fotos.forEach(f => archive.append(f.buffer, { name: `FOTOS/${f.originalname}` }));
+    if (arquivos?.videos) arquivos.videos.forEach(v => archive.append(v.buffer, { name: `VIDEOS/${v.originalname}` }));
 
     archive.finalize();
   });
 }
+
+// Rota principal
 app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), async (req, res) => {
   try {
     const {
@@ -147,34 +141,22 @@ app.post('/api/submit', upload.fields([{ name: 'fotos' }, { name: 'videos' }]), 
       observacoes = ''
     } = req.body;
 
-    // Objetos
     let objetos = req.body.objetos ? (typeof req.body.objetos === 'string' ? JSON.parse(req.body.objetos) : req.body.objetos) : {};
-
-    // Patrulhamento
     let patrulhamento = req.body.patrulhamento ? (typeof req.body.patrulhamento === 'string' ? JSON.parse(req.body.patrulhamento) : req.body.patrulhamento) : {};
-
-    // Ocorrências
     let ocorrencias = req.body.ocorrencias ? (typeof req.body.ocorrencias === 'string' ? JSON.parse(req.body.ocorrencias) : req.body.ocorrencias) : {};
 
     if (objetos.cones?.quantidade) objetos.cones.quantidade = parseInt(objetos.cones.quantidade) || 0;
 
-    // Debug no console
-    console.log('OBJETOS RECEBIDOS:', objetos);
-    console.log('PATRULHAMENTO RECEBIDO:', patrulhamento);
-    console.log('OCORRÊNCIAS RECEBIDAS:', ocorrencias);
-
-    // Extrair nomes das ocorrências selecionadas
-    const nomesOcorrencias = Object.keys(ocorrencias).filter(item => ocorrencias[item]?.primeiro || ocorrencias[item]);
-    console.log('Nomes das ocorrências selecionadas:', nomesOcorrencias);
-console.log("OCORRÊNCIAS NO BACKEND:", ocorrencias);
+    console.log("OBJETOS:", objetos);
+    console.log("PATRULHAMENTO:", patrulhamento);
+    console.log("OCORRÊNCIAS:", ocorrencias);
 
     const pdfBuffer = await generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes });
 
-    const hoje = new Date();
-    const dataAtual = `${hoje.getDate().toString().padStart(2,'0')}-${(hoje.getMonth()+1).toString().padStart(2,'0')}-${hoje.getFullYear()}`;
-    const arquivoNome = `${matricula}-${dataAtual}`;
+    // Nome do arquivo baseado no PDF modelo
+    const nomeArquivoPDF = `${formatDateExtenso(dataInicio)} - ${nome}`;
 
-    const zipBuffer = await generateZIP(pdfBuffer, req.files, arquivoNome);
+    const zipBuffer = await generateZIP(pdfBuffer, req.files, nomeArquivoPDF);
 
     if (zipBuffer.length > MAX_EMAIL_SIZE) {
       return res.status(400).json({ error: 'Arquivo muito grande para envio por e-mail. Apenas PDF será enviado.' });
@@ -191,9 +173,9 @@ console.log("OCORRÊNCIAS NO BACKEND:", ocorrencias);
     await transporter.sendMail({
       from: '"RELATÓRIO AUTOMÁTICO" <enviorforms@gmail.com>',
       to: 'ruanmarcos1771@gmail.com',
-      subject: `RELATÓRIO: ${arquivoNome}`,
+      subject: `RELATÓRIO: ${nomeArquivoPDF}`,
       text: 'Segue em anexo o relatório em ZIP.',
-      attachments: [{ filename: `${arquivoNome}.zip`, content: zipBuffer }]
+      attachments: [{ filename: `${nomeArquivoPDF}.zip`, content: zipBuffer }]
     });
 
     return res.status(200).json({ message: 'Relatório enviado por e-mail com sucesso!' });
