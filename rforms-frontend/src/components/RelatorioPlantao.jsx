@@ -358,17 +358,26 @@ export default function RelatorioPlantao() {
       </fieldset>
 
       {/* Mostra tamanho total */}
-      <p style={{ marginTop: '10px', fontWeight: 'bold', color: totalSize >= 25 * 1024 * 1024 ? 'red' : 'black' }}>
+      <p style={{ marginTop: '10px', fontWeight: 'bold', color: totalSize >= 25 * 1024 * 1024 ? 'red' : 'black', textAlign: 'center' }}>
         Tamanho total: {(totalSize / (1024 * 1024)).toFixed(2)} MB / 25 MB
       </p>
 
       <button
-        type="submit"
-        className="form-button"
-        disabled={isSubmitting || totalSize >= 25 * 1024 * 1024}
-      >
-        {isSubmitting ? 'ENVIANDO...' : 'ENVIAR RELATÓRIO'}
-      </button>
+  type="submit"
+  className="form-button"
+  style={{
+    backgroundColor: totalSize >= 25 * 1024 * 1024 ? 'gray' : '',
+    cursor: totalSize >= 25 * 1024 * 1024 ? 'not-allowed' : 'pointer',
+  }}
+  disabled={isSubmitting || totalSize >= 25 * 1024 * 1024}
+>
+  {totalSize >= 25 * 1024 * 1024
+    ? 'LIMITE ULTRAPASSADO'
+    : isSubmitting
+    ? 'ENVIANDO...'
+    : 'ENVIAR RELATÓRIO'}
+</button>
+
       </form>
     </div>
   );
