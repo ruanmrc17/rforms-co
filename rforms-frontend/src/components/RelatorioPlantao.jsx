@@ -20,8 +20,6 @@ export default function RelatorioPlantao() {
     videos: null,
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false); // estado de envio
-
   const objetosList = [
     'CELULAR',
     'CARREGADOR DO CELULAR',
@@ -78,10 +76,39 @@ export default function RelatorioPlantao() {
     'OUTROS'
   ];
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalSize, setTotalSize] = useState(95795); // soma dos arquivos
+
+  // função para atualizar o tamanho total
+  const calculateTotalSize = (fotos, videos) => {
+    let size = 95795;
+    if (fotos) {
+      for (let i = 0; i < fotos.length; i++) {
+        size += fotos[i].size;
+      }
+    }
+    if (videos) {
+      for (let i = 0; i < videos.length; i++) {
+        size += videos[i].size;
+      }
+    }
+
+    setTotalSize(size);
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
 
-    if (type === 'checkbox' && name === 'CONE(S)') {
+    if (type === 'file') {
+      setData(prev => {
+        const newData = { ...prev, [name]: files };
+        calculateTotalSize(
+          name === "fotos" ? files : prev.fotos,
+          name === "videos" ? files : prev.videos
+        );
+        return newData;
+      });
+    } else if (type === 'checkbox' && name === 'CONE(S)') {
       setData(prev => ({
         ...prev,
         objetos: { ...prev.objetos, cones: { ...prev.objetos.cones, marcado: checked } },
@@ -103,8 +130,6 @@ export default function RelatorioPlantao() {
       }));
     } else if (type === 'checkbox') {
       setData(prev => ({ ...prev, objetos: { ...prev.objetos, [name]: checked } }));
-    } else if (type === 'file') {
-      setData(prev => ({ ...prev, [name]: files }));
     } else if (name.startsWith('patrulhamento')) {
       const [, item, field] = name.split('-');
       setData(prev => ({
@@ -130,7 +155,11 @@ export default function RelatorioPlantao() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true); // desabilita o botão
+    if (totalSize >= 25 * 1024 * 1024) {
+      alert("O tamanho total dos arquivos não pode ultrapassar 25MB.");
+      return;
+    }
+    setIsSubmitting(true);
 
     const formDataToSend = new FormData();
     Object.keys(data).forEach(key => {
@@ -148,23 +177,22 @@ export default function RelatorioPlantao() {
     });
 
     try {
-  const res = await fetch('https://backapi-rd6w.onrender.com/api/submit', {
-    method: 'POST',
-    body: formDataToSend,
-  });
+      const res = await fetch('https://backapi-rd6w.onrender.com/api/submit', {
+        method: 'POST',
+        body: formDataToSend,
+      });
 
-  const result = await res.json().catch(() => ({ error: res.statusText }));
+      const result = await res.json().catch(() => ({ error: res.statusText }));
 
-  if (!res.ok) {
-    alert(`Erro do servidor: ${result.error}`);
-  } else {
-    alert(result.message || 'Relatório enviado com sucesso!');
-  }
-} catch (err) {
-  alert(`Erro desconhecido: ${err.message}`);
-}
-finally {
-      setIsSubmitting(false); // habilita o botão novamente
+      if (!res.ok) {
+        alert(`Erro do servidor: ${result.error}`);
+      } else {
+        alert(result.message || 'Relatório enviado com sucesso!');
+      }
+    } catch (err) {
+      alert(`Erro desconhecido: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -305,26 +333,42 @@ finally {
           />
         </fieldset>
 
-        {/* FOTOS E VÍDEOS */}
-        <fieldset>
-          <legend style={{ marginTop: '20px' }}>IMPORTAR FOTOS</legend>
-          <label htmlFor="fotos" className="upload-label">📷 Selecionar Fotos</label>
-          <input id="fotos" type="file" name="fotos" accept="image/*" multiple onChange={handleChange} disabled={isSubmitting} />
-          {data.fotos && data.fotos.length > 0 && (
-            <p className="upload-info">{data.fotos.length} foto(s) selecionada(s)</p>
-          )}
+         <fieldset>
+        <legend style={{ marginTop: '20px' }}>IMPORTAR FOTOS</legend>
+        <label htmlFor="fotos" className="upload-label">📷 Selecionar Fotos</label>
+        <input id="fotos" type="file" name="fotos" accept="image/*" multiple onChange={handleChange} disabled={isSubmitting} />
+        {data.fotos && data.fotos.length > 0 && (
+          <ul>
+            {Array.from(data.fotos).map((file, i) => (
+              <li key={i}>{file.name} - {(file.size / 1024).toFixed(2)} KB</li>
+            ))}
+          </ul>
+        )}
 
-          <legend>IMPORTAR VÍDEOS</legend>
-          <label htmlFor="videos" className="upload-label">🎥 Selecionar Vídeos</label>
-          <input id="videos" type="file" name="videos" accept="video/*" multiple onChange={handleChange} disabled={isSubmitting} />
-          {data.videos && data.videos.length > 0 && (
-            <p className="upload-info">{data.videos.length} vídeo(s) selecionado(s)</p>
-          )}
-        </fieldset>
+        <legend>IMPORTAR VÍDEOS</legend>
+        <label htmlFor="videos" className="upload-label">🎥 Selecionar Vídeos</label>
+        <input id="videos" type="file" name="videos" accept="video/*" multiple onChange={handleChange} disabled={isSubmitting} />
+        {data.videos && data.videos.length > 0 && (
+          <ul>
+            {Array.from(data.videos).map((file, i) => (
+              <li key={i}>{file.name} - {(file.size / 1024).toFixed(2)} KB</li>
+            ))}
+          </ul>
+        )}
+      </fieldset>
 
-        <button type="submit" className="form-button" disabled={isSubmitting}>
-          {isSubmitting ? 'ENVIANDO...' : 'ENVIAR RELATÓRIO'}
-        </button>
+      {/* Mostra tamanho total */}
+      <p style={{ marginTop: '10px', fontWeight: 'bold', color: totalSize >= 25 * 1024 * 1024 ? 'red' : 'black' }}>
+        Tamanho total: {(totalSize / (1024 * 1024)).toFixed(2)} MB / 25 MB
+      </p>
+
+      <button
+        type="submit"
+        className="form-button"
+        disabled={isSubmitting || totalSize >= 25 * 1024 * 1024}
+      >
+        {isSubmitting ? 'ENVIANDO...' : 'ENVIAR RELATÓRIO'}
+      </button>
       </form>
     </div>
   );
