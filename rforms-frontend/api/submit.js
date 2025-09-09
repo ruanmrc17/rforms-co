@@ -10,7 +10,6 @@ const app = express();
 const MAX_EMAIL_SIZE = 25 * 1024 * 1024; // 25MB
 const MAX_FILE_SIZE = 20 * 1024 * 1024;  // 20MB por arquivo
 
-// Armazenamento em memória
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: MAX_FILE_SIZE } });
 
@@ -18,18 +17,14 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Função para formatar datas
 function formatDateExtenso(dataStr) {
   if (!dataStr) return '';
-  const meses = [
-    'janeiro','fevereiro','março','abril','maio','junho',
-    'julho','agosto','setembro','outubro','novembro','dezembro'
-  ];
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho',
+                 'julho','agosto','setembro','outubro','novembro','dezembro'];
   const [ano, mes, dia] = dataStr.split('-');
   return `${dia} de ${meses[parseInt(mes,10)-1]} de ${ano}`;
 }
 
-// Gera PDF
 async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida, horaSaida, objetos, patrulhamento, ocorrencias, observacoes }) {
   return new Promise(resolve => {
     const pdfDoc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -59,20 +54,25 @@ async function generatePDF({ nome, matricula, dataInicio, horaInicio, dataSaida,
   });
 }
 
-// Gera ZIP com PDF + arquivos
 async function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF){
   return new Promise((resolve, reject)=>{
     const archive = archiver('zip', { zlib: { level: 9 } });
     const passthrough = new PassThrough();
     const chunks = [];
+
     passthrough.on('data', chunk => chunks.push(chunk));
     passthrough.on('end', () => resolve(Buffer.concat(chunks)));
     passthrough.on('error', reject);
+
+    archive.on('error', err => {
+      console.error('Erro no Archiver:', err);
+      reject(err);
+    });
+
     archive.pipe(passthrough);
 
     archive.append(pdfBuffer, { name: `${nomeArquivoPDF}.pdf` });
 
-    // Garantindo que os campos existem
     const fotos = arquivos?.fotos || [];
     const videos = arquivos?.videos || [];
 
@@ -91,6 +91,10 @@ async function generateZIP(pdfBuffer, arquivos, nomeArquivoPDF){
 // Rota principal
 app.post('/api/submit', upload.fields([{ name:'fotos', maxCount:10 }, { name:'videos', maxCount:5 }]), async (req,res)=>{
   try {
+    console.log('=== NOVO ENVIO ===');
+    console.log('Corpo:', req.body);
+    console.log('Arquivos recebidos:', Object.keys(req.files), req.files);
+
     const { nome='', matricula='', dataInicio='', horaInicio='', dataSaida='', horaSaida='', observacoes='' } = req.body;
     const objetos = req.body.objetos ? JSON.parse(req.body.objetos) : {};
     const patrulhamento = req.body.patrulhamento ? JSON.parse(req.body.patrulhamento) : {};
@@ -100,11 +104,13 @@ app.post('/api/submit', upload.fields([{ name:'fotos', maxCount:10 }, { name:'vi
     const nomeArquivoPDF = `${formatDateExtenso(dataInicio)} - ${nome}`;
     const zipBuffer = await generateZIP(pdfBuffer, req.files, nomeArquivoPDF);
 
+    console.log('Tamanho do ZIP:', zipBuffer.length);
+
     if(zipBuffer.length > MAX_EMAIL_SIZE){
+      console.warn('ZIP muito grande!');
       return res.status(400).json({ error:'Arquivos somados muito grandes para envio por e-mail. Envie arquivos menores.' });
     }
 
-    // Envio de e-mail
     const transporter = nodemailer.createTransport({
       service:'gmail',
       auth:{ user:'enviorforms@gmail.com', pass:'lgni quba jihs zgox' }
@@ -118,11 +124,12 @@ app.post('/api/submit', upload.fields([{ name:'fotos', maxCount:10 }, { name:'vi
       attachments:[{ filename:`${nomeArquivoPDF}.zip`, content:zipBuffer }]
     });
 
+    console.log('Email enviado com sucesso!');
     res.status(200).json({ message:'Relatório enviado com sucesso!' });
 
   } catch(err){
-    console.error('Erro no backend:', err);
-    res.status(500).json({ error:'Erro ao gerar ou enviar o relatório' });
+    console.error('Erro capturado no backend:', err);
+    res.status(500).json({ error: err.message || 'Erro desconhecido no backend' });
   }
 });
 

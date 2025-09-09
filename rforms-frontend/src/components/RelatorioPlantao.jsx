@@ -148,22 +148,22 @@ export default function RelatorioPlantao() {
     });
 
     try {
-      const res = await fetch('https://rforms-co.vercel.app/api/submit', {
-        method: 'POST',
-        body: formDataToSend,
-      });
+  const res = await fetch('https://rforms-co.vercel.app/api/submit', {
+    method: 'POST',
+    body: formDataToSend,
+  });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: res.statusText }));
-        alert(`Erro do servidor: ${errorData.error}`);
-      } else {
-        const result = await res.json();
-        alert(result.message || 'Relatório enviado com sucesso!');
-      }
-    } catch (err) {
-      console.error(err);
-      alert(`Erro desconhecido: ${err.message}`);
-    } finally {
+  const result = await res.json().catch(() => ({ error: res.statusText }));
+
+  if (!res.ok) {
+    alert(`Erro do servidor: ${result.error}`);
+  } else {
+    alert(result.message || 'Relatório enviado com sucesso!');
+  }
+} catch (err) {
+  alert(`Erro desconhecido: ${err.message}`);
+}
+finally {
       setIsSubmitting(false); // habilita o botão novamente
     }
   };
