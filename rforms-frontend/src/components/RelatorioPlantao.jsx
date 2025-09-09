@@ -148,7 +148,7 @@ export default function RelatorioPlantao() {
     });
 
     try {
-  const res = await fetch('https://rforms-co.vercel.app/api/submit', {
+  const res = await fetch('https://backapi-rd6w.onrender.com/api/submit', {
     method: 'POST',
     body: formDataToSend,
   });
