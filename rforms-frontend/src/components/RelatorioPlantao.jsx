@@ -340,7 +340,7 @@ export default function RelatorioPlantao() {
         {data.fotos && data.fotos.length > 0 && (
           <ul>
             {Array.from(data.fotos).map((file, i) => (
-              <li key={i}>{file.name} - {(file.size / 1024).toFixed(2)} KB</li>
+              <li className='arq' key={i}>{file.name} - {(file.size / 1024).toFixed(2)} KB</li>
             ))}
           </ul>
         )}
@@ -351,7 +351,7 @@ export default function RelatorioPlantao() {
         {data.videos && data.videos.length > 0 && (
           <ul>
             {Array.from(data.videos).map((file, i) => (
-              <li key={i}>{file.name} - {(file.size / 1024).toFixed(2)} KB</li>
+              <li className='arq' key={i}>{file.name} - {(file.size / 1024).toFixed(2)} KB</li>
             ))}
           </ul>
         )}

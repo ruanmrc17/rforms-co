@@ -343,6 +343,10 @@ input[type="file"] {
     font-size: 0.75rem;
   }
 
+  .arq{
+    font-size: 12px;
+  }
+
   .checkbox-group label {
     flex-wrap: wrap;
     gap: 0.4rem;
